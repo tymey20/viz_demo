@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Health — Apex Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg-primary:#f0f0f0; --bg-card:#ffffff; --border:#dcdcdc; --border-accent:#c0c0c0; --text-primary:#1a1a1a; --text-secondary:#555555; --text-muted:#767676; --accent-red:#CC0000; --accent-green:#2e7d32; --accent-amber:#b8860b; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; }
+  .brand-bar { background:#CC0000; height:4px; }
+  .brand-header { background:#fff; border-bottom:1px solid var(--border); padding:14px 40px; display:flex; align-items:center; gap:14px; }
+  .brand-key-icon { width:28px; height:28px; display:flex; align-items:center; justify-content:center; }
+  .brand-name { font-size:15px; font-weight:700; letter-spacing:-0.3px; }
+  .brand-divider { width:1px; height:20px; background:#d4d4d4; }
+  .brand-dept { font-size:12px; color:var(--text-muted); font-weight:500; }
+  .nav-link { font-size:12px; color:var(--accent-red); text-decoration:none; font-weight:600; margin-left:auto; }
+  .nav-link:hover { text-decoration:underline; }
+  .dashboard { max-width:1440px; margin:0 auto; padding:32px 40px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px; }
+  .header-left h1 { font-size:26px; font-weight:700; letter-spacing:-0.5px; }
+  .header-left .subtitle { font-size:13px; color:var(--text-muted); margin-top:4px; font-family:'JetBrains Mono',monospace; }
+  .period-label { font-family:'JetBrains Mono',monospace; font-size:12px; color:#CC0000; background:rgba(204,0,0,0.06); padding:6px 14px; border-radius:6px; border:1px solid rgba(204,0,0,0.2); }
+  .section-title { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-muted); margin-bottom:16px; }
+  .gauge-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:32px; }
+  .donut-row { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:32px; }
+  .card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center; }
+  .card-title { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-muted); margin-bottom:12px; }
+  .card-trend { font-size:11px; margin-top:8px; font-family:'JetBrains Mono',monospace; }
+  .sparkline-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .spark-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:16px 20px; }
+  .spark-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .spark-title { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-muted); }
+  .spark-value { font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:600; }
+  .tooltip { position:fixed; pointer-events:none; background:rgba(26,26,26,0.94); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 14px; font-size:12px; color:#fff; z-index:1000; backdrop-filter:blur(8px); opacity:0; transition:opacity 0.15s; max-width:260px; }
+  .tooltip.visible { opacity:1; }
+  .tooltip .tt-label { font-size:10px; color:#b5b5b5; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .tooltip .tt-value { font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; }
+  .tooltip .tt-sub { font-size:11px; color:#d4d4d4; margin-top:2px; }
+  @keyframes fadeInUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  .animate-in { animation:fadeInUp 0.5s ease-out forwards; opacity:0; }
+  .delay-1 { animation-delay:0.05s; } .delay-2 { animation-delay:0.1s; } .delay-3 { animation-delay:0.15s; } .delay-4 { animation-delay:0.2s; }
+  @media (max-width:1200px) { .gauge-row { grid-template-columns:repeat(2,1fr); } .donut-row { grid-template-columns:repeat(3,1fr); } .sparkline-grid { grid-template-columns:repeat(2,1fr); } }
+</style>
+</head>
+<body>
+<div class="brand-bar"></div>
+<div class="brand-header">
+  <div class="brand-key-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="14" width="4" height="6" rx="1" fill="#CC0000"/><rect x="9" y="10" width="4" height="10" rx="1" fill="#CC0000" opacity="0.8"/><rect x="15" y="6" width="4" height="14" rx="1" fill="#CC0000" opacity="0.6"/></svg></div>
+  <span class="brand-name">Apex Analytics</span>
+  <div class="brand-divider"></div>
+  <span class="brand-dept">Credit Risk Analytics &mdash; Portfolio Health</span>
+  <a href="index.html" class="nav-link">&larr; All Dashboards</a>
+</div>
+<div class="dashboard">
+  <div class="header animate-in">
+    <div class="header-left"><h1>Portfolio Health Dashboard</h1><div class="subtitle">Key risk indicators &amp; limit utilization</div></div>
+    <div class="period-label">Q1 2026</div>
+  </div>
+
+  <div class="section-title animate-in delay-1">Health Score Gauges</div>
+  <div class="gauge-row animate-in delay-1" id="gauge-row"></div>
+
+  <div class="section-title animate-in delay-2">Limit Utilization</div>
+  <div class="donut-row animate-in delay-2" id="donut-row"></div>
+
+  <div class="section-title animate-in delay-3">Trailing 8-Quarter Trends</div>
+  <div class="sparkline-grid animate-in delay-3" id="sparkline-grid"></div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const ttEl = document.getElementById('tooltip');
+function showTooltip(evt, html) { ttEl.innerHTML=html; ttEl.classList.add('visible'); ttEl.style.left=Math.min(evt.clientX+12,window.innerWidth-280)+'px'; ttEl.style.top=Math.min(evt.clientY-10,window.innerHeight-100)+'px'; }
+function hideTooltip() { ttEl.classList.remove('visible'); }
+
+const GAUGES = [
+  { title:"Portfolio Health Score", value:78, max:100, trend:"+3pts from Q4", trendDir:"up" },
+  { title:"Credit Quality Index", value:72, max:100, trend:"-1pt from Q4", trendDir:"down" },
+  { title:"Diversification Score", value:85, max:100, trend:"+2pts from Q4", trendDir:"up" },
+  { title:"Stress Resilience", value:68, max:100, trend:"+5pts from Q4", trendDir:"up" },
+];
+
+const DONUTS = [
+  { title:"Total Portfolio", pct:82, limit:8.2, used:6.7 },
+  { title:"CRE Concentration", pct:74, limit:3.5, used:2.6 },
+  { title:"Single Obligor", pct:45, limit:0.5, used:0.225 },
+  { title:"Industry Limit", pct:68, limit:1.8, used:1.22 },
+  { title:"Geographic Limit", pct:55, limit:2.0, used:1.1 },
+  { title:"Watchlist Ratio", pct:12, limit:0.8, used:0.096 },
+];
+
+const SPARKLINES = [
+  { title:"Portfolio Health", values:[68,70,72,74,73,75,75,78], unit:"" },
+  { title:"Credit Quality", values:[76,75,74,73,74,73,73,72], unit:"" },
+  { title:"Diversification", values:[80,81,82,82,83,84,84,85], unit:"" },
+  { title:"Total Utilization", values:[75,76,78,79,80,80,81,82], unit:"%" },
+  { title:"CRE Concentration", values:[68,69,70,71,72,73,73,74], unit:"%" },
+  { title:"Watchlist Ratio", values:[8,9,10,11,12,13,12,12], unit:"%" },
+];
+
+function gaugeColor(pct) {
+  if (pct >= 75) return 'var(--accent-green)';
+  if (pct >= 50) return 'var(--accent-amber)';
+  return 'var(--accent-red)';
+}
+
+function donutColor(pct) {
+  if (pct < 70) return 'var(--accent-green)';
+  if (pct < 90) return 'var(--accent-amber)';
+  return 'var(--accent-red)';
+}
+
+function renderGauges() {
+  const container = document.getElementById('gauge-row');
+  container.innerHTML = '';
+  GAUGES.forEach((g, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const color = gaugeColor(g.value / g.max * 100);
+    const trendColor = g.trendDir === 'up' ? 'var(--accent-green)' : 'var(--accent-red)';
+    const trendArrow = g.trendDir === 'up' ? '↑' : '↓';
+
+    card.innerHTML = `<div class="card-title">${g.title}</div><div id="gauge-${idx}"></div><div class="card-trend" style="color:${trendColor}">${trendArrow} ${g.trend}</div>`;
+    container.appendChild(card);
+
+    const size = 180, radius = 70, thickness = 14;
+    const svg = d3.select(`#gauge-${idx}`).append('svg').attr('viewBox',`0 0 ${size} ${size*0.6}`).attr('width','100%');
+    const gEl = svg.append('g').attr('transform',`translate(${size/2},${size*0.55})`);
+
+    const startAngle = -Math.PI/2 - Math.PI/6;
+    const endAngle = Math.PI/2 + Math.PI/6;
+    const totalAngle = endAngle - startAngle;
+
+    // Background arc
+    const bgArc = d3.arc().innerRadius(radius-thickness).outerRadius(radius).startAngle(startAngle).endAngle(endAngle).cornerRadius(2);
+    gEl.append('path').attr('d', bgArc()).attr('fill','#e8e8e8');
+
+    // Color zones
+    const zones = [
+      { end: 0.5, color: 'rgba(204,0,0,0.15)' },
+      { end: 0.75, color: 'rgba(184,134,11,0.15)' },
+      { end: 1.0, color: 'rgba(46,125,50,0.15)' },
+    ];
+    let zoneStart = 0;
+    zones.forEach(z => {
+      const arc = d3.arc().innerRadius(radius-thickness).outerRadius(radius)
+        .startAngle(startAngle + totalAngle * zoneStart)
+        .endAngle(startAngle + totalAngle * z.end).cornerRadius(0);
+      gEl.append('path').attr('d', arc()).attr('fill', z.color);
+      zoneStart = z.end;
+    });
+
+    // Value arc (animated)
+    const valueArc = d3.arc().innerRadius(radius-thickness).outerRadius(radius).startAngle(startAngle).cornerRadius(2);
+    const targetAngle = startAngle + totalAngle * (g.value / g.max);
+    gEl.append('path')
+      .attr('fill', color)
+      .transition().duration(1200).delay(idx*200)
+      .attrTween('d', () => {
+        const interp = d3.interpolate(startAngle, targetAngle);
+        return t => valueArc.endAngle(interp(t))();
+      });
+
+    // Needle
+    const needleLen = radius - thickness - 8;
+    const needle = gEl.append('line')
+      .attr('x1',0).attr('y1',0).attr('stroke','#1a1a1a').attr('stroke-width',2).attr('stroke-linecap','round')
+      .attr('x2',0).attr('y2',-needleLen);
+    needle.transition().duration(1200).delay(idx*200)
+      .attrTween('transform', () => {
+        const angleInterp = d3.interpolate(startAngle, targetAngle);
+        return t => `rotate(${angleInterp(t) * 180 / Math.PI})`;
+      });
+
+    gEl.append('circle').attr('r',4).attr('fill','#1a1a1a');
+
+    // Value text
+    gEl.append('text').attr('y', -20).attr('text-anchor','middle')
+      .attr('font-family',"'JetBrains Mono',monospace").attr('font-size',22).attr('font-weight',700)
+      .attr('fill',color).text(g.value);
+
+    // Min/max labels
+    gEl.append('text').attr('x',-radius+5).attr('y',14).attr('font-size',9).attr('fill','var(--text-muted)').attr('text-anchor','middle').text('0');
+    gEl.append('text').attr('x',radius-5).attr('y',14).attr('font-size',9).attr('fill','var(--text-muted)').attr('text-anchor','middle').text(g.max);
+  });
+}
+
+function renderDonuts() {
+  const container = document.getElementById('donut-row');
+  container.innerHTML = '';
+  DONUTS.forEach((d, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const color = donutColor(d.pct);
+
+    card.innerHTML = `<div class="card-title">${d.title}</div><div id="donut-${idx}"></div><div style="font-size:10px;color:var(--text-muted);margin-top:8px;font-family:'JetBrains Mono',monospace">Limit: $${d.limit.toFixed(1)}B<br>Used: $${d.used.toFixed(2)}B</div>`;
+    container.appendChild(card);
+
+    const size = 120, radius = 46, thickness = 10;
+    const svg = d3.select(`#donut-${idx}`).append('svg').attr('viewBox',`0 0 ${size} ${size}`).attr('width','100%').style('max-width','120px').style('margin','0 auto');
+    const g = svg.append('g').attr('transform',`translate(${size/2},${size/2})`);
+
+    // Background
+    g.append('circle').attr('r',radius).attr('fill','none').attr('stroke','#e8e8e8').attr('stroke-width',thickness);
+
+    // Value arc
+    const arc = d3.arc().innerRadius(radius-thickness/2).outerRadius(radius+thickness/2).startAngle(0).cornerRadius(thickness/2);
+    const targetAngle = (d.pct / 100) * Math.PI * 2;
+    g.append('path')
+      .attr('fill', color)
+      .transition().duration(1000).delay(idx*100)
+      .attrTween('d', () => {
+        const interp = d3.interpolate(0, targetAngle);
+        return t => arc.endAngle(interp(t))();
+      });
+
+    // Center text
+    g.append('text').attr('text-anchor','middle').attr('dominant-baseline','middle')
+      .attr('font-family',"'JetBrains Mono',monospace").attr('font-size',18).attr('font-weight',700)
+      .attr('fill',color).text(d.pct+'%');
+  });
+}
+
+function renderSparklines() {
+  const container = document.getElementById('sparkline-grid');
+  container.innerHTML = '';
+  SPARKLINES.forEach((s, idx) => {
+    const card = document.createElement('div');
+    card.className = 'spark-card';
+    const current = s.values[s.values.length-1];
+    const prev = s.values[s.values.length-2];
+    const diff = current - prev;
+    const diffColor = diff >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+    const diffStr = (diff >= 0 ? '+' : '') + diff;
+
+    card.innerHTML = `<div class="spark-header"><span class="spark-title">${s.title}</span><span class="spark-value">${current}${s.unit}</span></div><div id="spark-${idx}"></div><div style="text-align:right;font-size:10px;font-family:'JetBrains Mono',monospace;color:${diffColor};margin-top:4px">${diffStr}${s.unit} QoQ</div>`;
+    container.appendChild(card);
+
+    const width = card.clientWidth || 300, height = 60;
+    // Defer to next frame so container has width
+    requestAnimationFrame(() => {
+      const w = document.getElementById(`spark-${idx}`).clientWidth || 280;
+      const svg = d3.select(`#spark-${idx}`).append('svg').attr('viewBox',`0 0 ${w} ${height}`).attr('width','100%');
+      const margin = {top:4,right:8,bottom:4,left:4};
+      const innerW = w-margin.left-margin.right, innerH = height-margin.top-margin.bottom;
+      const g = svg.append('g').attr('transform',`translate(${margin.left},${margin.top})`);
+
+      const x = d3.scaleLinear().domain([0, s.values.length-1]).range([0, innerW]);
+      const y = d3.scaleLinear().domain([d3.min(s.values)*0.9, d3.max(s.values)*1.1]).range([innerH, 0]);
+
+      const area = d3.area().x((d,i)=>x(i)).y0(innerH).y1(d=>y(d)).curve(d3.curveMonotoneX);
+      const line = d3.line().x((d,i)=>x(i)).y(d=>y(d)).curve(d3.curveMonotoneX);
+
+      g.append('path').datum(s.values).attr('d',area).attr('fill',diffColor).attr('opacity',0.08);
+
+      const path = g.append('path').datum(s.values).attr('d',line)
+        .attr('fill','none').attr('stroke',diffColor).attr('stroke-width',2).attr('stroke-linecap','round');
+      const totalLen = path.node().getTotalLength();
+      path.attr('stroke-dasharray',totalLen).attr('stroke-dashoffset',totalLen)
+        .transition().duration(800).delay(idx*100).attr('stroke-dashoffset',0);
+
+      // End dot
+      g.append('circle')
+        .attr('cx',x(s.values.length-1)).attr('cy',y(current))
+        .attr('r',4).attr('fill',diffColor).attr('stroke','#fff').attr('stroke-width',2)
+        .attr('opacity',0)
+        .transition().duration(300).delay(idx*100+700).attr('opacity',1);
+    });
+  });
+}
+
+renderGauges();
+renderDonuts();
+setTimeout(renderSparklines, 50); // Small delay so DOM is ready for width calculations
+</script>
+</body>
+</html>

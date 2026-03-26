@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Risk-Return Scatter — Apex Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #f0f0f0; --bg-card: #ffffff; --border: #dcdcdc; --border-accent: #c0c0c0;
+    --text-primary: #1a1a1a; --text-secondary: #555555; --text-muted: #767676;
+    --accent-red: #CC0000; --accent-green: #2e7d32;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; }
+  .brand-bar { background:#CC0000; height:4px; }
+  .brand-header { background:#fff; border-bottom:1px solid var(--border); padding:14px 40px; display:flex; align-items:center; gap:14px; }
+  .brand-key-icon { width:28px; height:28px; display:flex; align-items:center; justify-content:center; }
+  .brand-name { font-size:15px; font-weight:700; letter-spacing:-0.3px; }
+  .brand-divider { width:1px; height:20px; background:#d4d4d4; }
+  .brand-dept { font-size:12px; color:var(--text-muted); font-weight:500; }
+  .nav-link { font-size:12px; color:var(--accent-red); text-decoration:none; font-weight:600; margin-left:auto; }
+  .nav-link:hover { text-decoration:underline; }
+  .dashboard { max-width:1440px; margin:0 auto; padding:32px 40px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px; }
+  .header-left h1 { font-size:26px; font-weight:700; letter-spacing:-0.5px; }
+  .header-left .subtitle { font-size:13px; color:var(--text-muted); margin-top:4px; font-family:'JetBrains Mono',monospace; }
+  .period-label { font-family:'JetBrains Mono',monospace; font-size:12px; color:#CC0000; background:rgba(204,0,0,0.06); padding:6px 14px; border-radius:6px; border:1px solid rgba(204,0,0,0.2); }
+  .filter-bar { display:flex; gap:10px; margin-bottom:28px; flex-wrap:wrap; align-items:center; }
+  .filter-group { display:flex; align-items:center; gap:8px; }
+  .filter-label { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:600; }
+  .filter-btn { font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500; padding:6px 14px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-secondary); cursor:pointer; transition:all 0.2s; }
+  .filter-btn:hover { border-color:var(--border-accent); color:var(--text-primary); }
+  .filter-btn.active { background:rgba(204,0,0,0.12); border-color:#CC0000; color:#CC0000; }
+  .kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
+  .kpi-card { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:16px 18px; position:relative; overflow:hidden; }
+  .kpi-card .kpi-bar { position:absolute; top:0; left:0; width:100%; height:3px; }
+  .kpi-card .kpi-label { font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-muted); font-weight:600; margin-bottom:8px; }
+  .kpi-card .kpi-value { font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600; }
+  .kpi-card .kpi-sub { font-family:'JetBrains Mono',monospace; font-size:12px; margin-top:4px; }
+  .chart-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:24px 28px; margin-bottom:20px; }
+  .chart-title { font-size:14px; font-weight:600; margin-bottom:4px; }
+  .chart-desc { font-size:12px; color:var(--text-muted); margin-bottom:20px; }
+  .chart-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .tooltip { position:fixed; pointer-events:none; background:rgba(26,26,26,0.94); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 14px; font-size:12px; color:#fff; z-index:1000; backdrop-filter:blur(8px); opacity:0; transition:opacity 0.15s; max-width:280px; }
+  .tooltip.visible { opacity:1; }
+  .tooltip .tt-label { font-size:10px; color:#b5b5b5; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .tooltip .tt-value { font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; }
+  .tooltip .tt-sub { font-size:11px; color:#d4d4d4; margin-top:2px; }
+  .legend { display:flex; gap:20px; flex-wrap:wrap; margin-top:12px; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); }
+  .legend-dot { width:10px; height:10px; border-radius:50%; }
+  .quadrant-label { font-family:'DM Sans',sans-serif; font-size:10px; fill:var(--text-muted); font-weight:500; text-transform:uppercase; letter-spacing:0.8px; }
+  .detail-table { width:100%; border-collapse:separate; border-spacing:0; font-size:12px; }
+  .detail-table thead th { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:600; padding:8px 12px; text-align:right; border-bottom:1px solid var(--border); }
+  .detail-table thead th:first-child, .detail-table thead th:nth-child(2) { text-align:left; }
+  .detail-table tbody td { font-family:'JetBrains Mono',monospace; font-size:12px; padding:10px 12px; text-align:right; border-bottom:1px solid rgba(220,220,220,0.5); color:var(--text-secondary); }
+  .detail-table tbody td:first-child { font-family:'DM Sans',sans-serif; font-weight:600; color:var(--text-primary); text-align:left; }
+  .detail-table tbody td:nth-child(2) { font-family:'DM Sans',sans-serif; text-align:left; }
+  .detail-table tbody tr:hover td { background:rgba(204,0,0,0.03); }
+  .lob-badge { display:inline-block; font-size:10px; font-weight:600; padding:2px 8px; border-radius:4px; font-family:'JetBrains Mono',monospace; }
+  @keyframes fadeInUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  .animate-in { animation:fadeInUp 0.5s ease-out forwards; opacity:0; }
+  .delay-1 { animation-delay:0.05s; } .delay-2 { animation-delay:0.1s; } .delay-3 { animation-delay:0.15s; }
+  @media (max-width:1200px) { .kpi-row { grid-template-columns:repeat(2,1fr); } }
+</style>
+</head>
+<body>
+<div class="brand-bar"></div>
+<div class="brand-header">
+  <div class="brand-key-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="14" width="4" height="6" rx="1" fill="#CC0000"/><rect x="9" y="10" width="4" height="10" rx="1" fill="#CC0000" opacity="0.8"/><rect x="15" y="6" width="4" height="14" rx="1" fill="#CC0000" opacity="0.6"/></svg></div>
+  <span class="brand-name">Apex Analytics</span>
+  <div class="brand-divider"></div>
+  <span class="brand-dept">Credit Risk Analytics &mdash; Portfolio Strategy</span>
+  <a href="index.html" class="nav-link">&larr; All Dashboards</a>
+</div>
+<div class="dashboard">
+  <div class="header animate-in">
+    <div class="header-left"><h1>Risk-Return Scatter</h1><div class="subtitle">Industry segment positioning &mdash; weighted by exposure</div></div>
+    <div class="period-label">Q1 2026</div>
+  </div>
+  <div class="filter-bar animate-in delay-1">
+    <div class="filter-group">
+      <span class="filter-label">LOB</span>
+      <button class="filter-btn active" data-filter="lob" data-value="all">All</button>
+      <button class="filter-btn" data-filter="lob" data-value="cre">CRE</button>
+      <button class="filter-btn" data-filter="lob" data-value="ci">C&I</button>
+      <button class="filter-btn" data-filter="lob" data-value="sbl">SBL</button>
+      <button class="filter-btn" data-filter="lob" data-value="mfl">Multifamily</button>
+    </div>
+  </div>
+  <div class="kpi-row animate-in delay-1" id="kpi-row"></div>
+  <div class="chart-card animate-in delay-2">
+    <div class="chart-header">
+      <div><div class="chart-title">Risk vs. Return by Industry Segment</div>
+      <div class="chart-desc">Bubble size = total exposure &middot; Position = risk rating vs. spread &middot; Hover for detail</div></div>
+    </div>
+    <div id="scatter-chart"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="chart-card animate-in delay-3">
+    <div class="chart-title">Segment Detail</div>
+    <div class="chart-desc">All industry segments ranked by risk-adjusted return</div>
+    <div id="detail-table"></div>
+  </div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const LOB_COLORS = { cre: "#CC0000", ci: "#2e7d32", sbl: "#b8860b", mfl: "#5c3d6e" };
+const LOB_LABELS = { cre: "CRE", ci: "C&I", sbl: "SBL", mfl: "Multifamily" };
+
+const SEGMENTS = [
+  { name:"Healthcare",      lob:"ci",  exposure:853,  risk:3.4, spread:285 },
+  { name:"Technology",       lob:"ci",  exposure:728,  risk:2.6, spread:225 },
+  { name:"Manufacturing",   lob:"ci",  exposure:503,  risk:4.4, spread:340 },
+  { name:"Retail Trade",    lob:"ci",  exposure:337,  risk:4.8, spread:380 },
+  { name:"Office",          lob:"cre", exposure:670,  risk:5.6, spread:420 },
+  { name:"Industrial",      lob:"cre", exposure:590,  risk:2.9, spread:210 },
+  { name:"Retail CRE",      lob:"cre", exposure:290,  risk:5.1, spread:395 },
+  { name:"Hospitality",     lob:"cre", exposure:292,  risk:3.8, spread:310 },
+  { name:"Prof Services",   lob:"sbl", exposure:202,  risk:3.3, spread:265 },
+  { name:"Restaurants",     lob:"sbl", exposure:97,   risk:5.3, spread:435 },
+  { name:"Multifamily A",   lob:"mfl", exposure:663,  risk:2.4, spread:185 },
+  { name:"Multifamily B",   lob:"mfl", exposure:390,  risk:3.3, spread:240 },
+];
+
+let state = { lob: "all" };
+const ttEl = document.getElementById('tooltip');
+function showTooltip(evt, html) { ttEl.innerHTML = html; ttEl.classList.add('visible'); ttEl.style.left = Math.min(evt.clientX+12, window.innerWidth-300)+'px'; ttEl.style.top = Math.min(evt.clientY-10, window.innerHeight-100)+'px'; }
+function hideTooltip() { ttEl.classList.remove('visible'); }
+const fmtM = d => '$'+Math.abs(d).toLocaleString()+'M';
+
+function getFiltered() { return state.lob === 'all' ? SEGMENTS : SEGMENTS.filter(d => d.lob === state.lob); }
+
+function renderKPIs() {
+  const data = getFiltered();
+  const totalExp = data.reduce((s,d) => s+d.exposure, 0);
+  const wtdRisk = data.reduce((s,d) => s+d.risk*d.exposure, 0) / totalExp;
+  const wtdSpread = data.reduce((s,d) => s+d.spread*d.exposure, 0) / totalExp;
+  const sharpe = (wtdSpread / wtdRisk).toFixed(0);
+  const kpis = [
+    { label:"Total Exposure", value:fmtM(totalExp), sub:data.length+" segments", color:"#404040" },
+    { label:"Wtd Avg Risk", value:wtdRisk.toFixed(2), sub:"1=best, 6=worst", color:"#CC0000" },
+    { label:"Wtd Avg Spread", value:wtdSpread.toFixed(0)+"bps", sub:"over benchmark", color:"#2e7d32" },
+    { label:"Spread / Risk", value:sharpe+"bps", sub:"per risk unit", color:"#b8860b" },
+  ];
+  document.getElementById('kpi-row').innerHTML = kpis.map(k =>
+    `<div class="kpi-card"><div class="kpi-bar" style="background:${k.color}"></div><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.value}</div><div class="kpi-sub" style="color:${k.color}">${k.sub}</div></div>`
+  ).join('');
+}
+
+function renderScatter() {
+  const container = document.getElementById('scatter-chart'); container.innerHTML = '';
+  const data = getFiltered();
+  const width = container.clientWidth || 900, height = 480;
+  const margin = { top:20, right:40, bottom:50, left:60 };
+  const innerW = width-margin.left-margin.right, innerH = height-margin.top-margin.bottom;
+
+  const svg = d3.select(container).append('svg').attr('viewBox',`0 0 ${width} ${height}`).attr('width','100%');
+  const g = svg.append('g').attr('transform',`translate(${margin.left},${margin.top})`);
+
+  const xExtent = [1.5, 6.5], yExtent = [140, 480];
+  const x = d3.scaleLinear().domain(xExtent).range([0, innerW]);
+  const y = d3.scaleLinear().domain(yExtent).range([innerH, 0]);
+  const r = d3.scaleSqrt().domain([0, d3.max(data, d=>d.exposure)]).range([8, 48]);
+
+  // Grid
+  g.selectAll('.grid-x').data(x.ticks(5)).join('line').attr('x1',d=>x(d)).attr('x2',d=>x(d)).attr('y1',0).attr('y2',innerH).attr('stroke','var(--border)').attr('stroke-dasharray','3,3').attr('opacity',0.4);
+  g.selectAll('.grid-y').data(y.ticks(6)).join('line').attr('x1',0).attr('x2',innerW).attr('y1',d=>y(d)).attr('y2',d=>y(d)).attr('stroke','var(--border)').attr('stroke-dasharray','3,3').attr('opacity',0.4);
+
+  // Axis labels
+  g.selectAll('.x-tick').data(x.ticks(5)).join('text').attr('x',d=>x(d)).attr('y',innerH+28).attr('text-anchor','middle').attr('font-size',10).attr('font-family',"'JetBrains Mono',monospace").attr('fill','var(--text-muted)').text(d=>d.toFixed(1));
+  g.selectAll('.y-tick').data(y.ticks(6)).join('text').attr('x',-10).attr('y',d=>y(d)).attr('text-anchor','end').attr('dominant-baseline','middle').attr('font-size',10).attr('font-family',"'JetBrains Mono',monospace").attr('fill','var(--text-muted)').text(d=>d+'bps');
+
+  // Axis titles
+  svg.append('text').attr('x',margin.left+innerW/2).attr('y',height-6).attr('text-anchor','middle').attr('font-size',11).attr('font-weight',600).attr('fill','var(--text-muted)').text('Average Risk Rating →');
+  svg.append('text').attr('transform',`rotate(-90)`).attr('x',-(margin.top+innerH/2)).attr('y',16).attr('text-anchor','middle').attr('font-size',11).attr('font-weight',600).attr('fill','var(--text-muted)').text('Spread (bps) →');
+
+  // Quadrant lines
+  const medRisk = d3.median(data, d=>d.risk), medSpread = d3.median(data, d=>d.spread);
+  g.append('line').attr('x1',x(medRisk)).attr('x2',x(medRisk)).attr('y1',0).attr('y2',innerH).attr('stroke','var(--border-accent)').attr('stroke-dasharray','6,4').attr('opacity',0.6);
+  g.append('line').attr('x1',0).attr('x2',innerW).attr('y1',y(medSpread)).attr('y2',y(medSpread)).attr('stroke','var(--border-accent)').attr('stroke-dasharray','6,4').attr('opacity',0.6);
+
+  // Quadrant labels
+  const qPad = 8;
+  g.append('text').attr('class','quadrant-label').attr('x',qPad).attr('y',qPad+10).text('High Return / Low Risk');
+  g.append('text').attr('class','quadrant-label').attr('x',innerW-qPad).attr('y',qPad+10).attr('text-anchor','end').text('High Return / High Risk');
+  g.append('text').attr('class','quadrant-label').attr('x',qPad).attr('y',innerH-qPad).text('Low Return / Low Risk');
+  g.append('text').attr('class','quadrant-label').attr('x',innerW-qPad).attr('y',innerH-qPad).attr('text-anchor','end').text('Low Return / High Risk');
+
+  // Bubbles
+  const bubbles = g.selectAll('.bubble').data(data).join('circle')
+    .attr('cx', d=>x(d.risk)).attr('cy', d=>y(d.spread))
+    .attr('r', 0)
+    .attr('fill', d=>LOB_COLORS[d.lob])
+    .attr('opacity', 0.7)
+    .attr('stroke', d=>LOB_COLORS[d.lob])
+    .attr('stroke-width', 1.5)
+    .attr('cursor', 'pointer')
+    .on('mousemove', (evt, d) => {
+      const rar = (d.spread / d.risk).toFixed(0);
+      showTooltip(evt, `<div class="tt-label">${d.name} (${LOB_LABELS[d.lob]})</div><div class="tt-value">${fmtM(d.exposure)}</div><div class="tt-sub">Risk: ${d.risk.toFixed(1)} · Spread: ${d.spread}bps<br>Risk-Adj Return: ${rar}bps/unit</div>`);
+    })
+    .on('mouseleave', hideTooltip);
+
+  bubbles.transition().duration(600).delay((d,i) => i*60).attr('r', d => r(d.exposure));
+
+  // Bubble labels (for larger bubbles)
+  g.selectAll('.bubble-label').data(data.filter(d => d.exposure > 350)).join('text')
+    .attr('x', d=>x(d.risk)).attr('y', d=>y(d.spread)+4)
+    .attr('text-anchor','middle').attr('font-size',10).attr('font-weight',600)
+    .attr('fill','#fff').attr('pointer-events','none')
+    .attr('opacity',0)
+    .text(d => d.name.length > 12 ? d.name.slice(0,10)+'…' : d.name)
+    .transition().duration(400).delay(800).attr('opacity',1);
+
+  // Legend
+  document.getElementById('legend').innerHTML = Object.entries(LOB_LABELS).map(([k,v]) =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${LOB_COLORS[k]}"></div>${v}</div>`
+  ).join('') + '<div class="legend-item" style="margin-left:12px"><span style="color:var(--text-muted);font-size:10px">Bubble size = exposure</span></div>';
+}
+
+function renderTable() {
+  const data = [...getFiltered()].map(d => ({ ...d, rar: (d.spread / d.risk).toFixed(0) }))
+    .sort((a,b) => b.rar - a.rar);
+  let html = '<table class="detail-table"><thead><tr><th>Industry</th><th>LOB</th><th>Exposure ($M)</th><th>Avg Risk</th><th>Spread (bps)</th><th>Risk-Adj Return</th></tr></thead><tbody>';
+  data.forEach(d => {
+    const lobBg = LOB_COLORS[d.lob] + '12';
+    html += `<tr><td>${d.name}</td><td><span class="lob-badge" style="background:${lobBg};color:${LOB_COLORS[d.lob]}">${LOB_LABELS[d.lob]}</span></td><td>${d.exposure.toLocaleString()}</td><td>${d.risk.toFixed(1)}</td><td>${d.spread}</td><td style="font-weight:600;color:${+d.rar > 70 ? 'var(--accent-green)' : +d.rar > 50 ? '#b8860b' : 'var(--accent-red)'}">${d.rar}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('detail-table').innerHTML = html;
+}
+
+document.querySelectorAll('.filter-btn[data-filter="lob"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn[data-filter="lob"]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.lob = btn.dataset.value;
+    renderAll();
+  });
+});
+
+function renderAll() { renderKPIs(); renderScatter(); renderTable(); }
+let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderAll, 200); });
+renderAll();
+</script>
+</body>
+</html>

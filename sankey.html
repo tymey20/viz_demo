@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Risk Migration Sankey — Apex Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #f0f0f0;
+    --bg-card: #ffffff;
+    --border: #dcdcdc;
+    --border-accent: #c0c0c0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #555555;
+    --text-muted: #767676;
+    --accent-red: #CC0000;
+    --accent-red-dim: rgba(204,0,0,0.06);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
+  .brand-bar { background: #CC0000; height: 4px; width: 100%; }
+  .brand-header { background: #fff; border-bottom: 1px solid var(--border); padding: 14px 40px; display: flex; align-items: center; gap: 14px; }
+  .brand-key-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+  .brand-name { font-size: 15px; font-weight: 700; color: #1a1a1a; letter-spacing: -0.3px; }
+  .brand-divider { width: 1px; height: 20px; background: #d4d4d4; }
+  .brand-dept { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .nav-link { font-size: 12px; color: var(--accent-red); text-decoration: none; font-weight: 600; margin-left: auto; }
+  .nav-link:hover { text-decoration: underline; }
+  .dashboard { max-width: 1440px; margin: 0 auto; padding: 32px 40px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+  .header-left h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .header-left .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+  .period-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #CC0000; background: rgba(204,0,0,0.06); padding: 6px 14px; border-radius: 6px; border: 1px solid rgba(204,0,0,0.2); }
+  .chart-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 20px; }
+  .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .chart-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
+  .filter-bar { display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap; align-items: center; }
+  .filter-group { display: flex; align-items: center; gap: 8px; }
+  .filter-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 600; }
+  .filter-btn { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary); cursor: pointer; transition: all 0.2s; }
+  .filter-btn:hover { border-color: var(--border-accent); color: var(--text-primary); }
+  .filter-btn.active { background: rgba(204,0,0,0.12); border-color: #CC0000; color: #CC0000; }
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 28px; }
+  .kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; }
+  .kpi-card .kpi-bar { position: absolute; top: 0; left: 0; width: 100%; height: 3px; }
+  .kpi-card .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; }
+  .kpi-card .kpi-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 600; }
+  .kpi-card .kpi-sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-top: 4px; }
+  .tooltip { position: fixed; pointer-events: none; background: rgba(26,26,26,0.94); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #fff; z-index: 1000; backdrop-filter: blur(8px); opacity: 0; transition: opacity 0.15s; max-width: 300px; }
+  .tooltip.visible { opacity: 1; }
+  .tooltip .tt-label { font-size: 10px; color: #b5b5b5; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .tooltip .tt-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; }
+  .tooltip .tt-sub { font-size: 11px; color: #d4d4d4; margin-top: 2px; }
+  .sankey-node text { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; }
+  .sankey-link { fill: none; stroke-opacity: 0.3; transition: stroke-opacity 0.2s; }
+  .sankey-link:hover { stroke-opacity: 0.6; }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .migration-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  .migration-table thead th { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 600; padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--border); }
+  .migration-table thead th:first-child { text-align: left; }
+  .migration-table tbody td { font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 10px 12px; text-align: right; border-bottom: 1px solid rgba(220,220,220,0.5); color: var(--text-secondary); }
+  .migration-table tbody td:first-child { font-family: 'DM Sans', sans-serif; font-weight: 600; color: var(--text-primary); text-align: left; }
+  .migration-table tbody tr:hover td { background: rgba(204,0,0,0.03); }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .animate-in { animation: fadeInUp 0.5s ease-out forwards; opacity: 0; }
+  .delay-1 { animation-delay: 0.05s; } .delay-2 { animation-delay: 0.1s; } .delay-3 { animation-delay: 0.15s; }
+  @media (max-width: 1200px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } .summary-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="brand-bar"></div>
+<div class="brand-header">
+  <div class="brand-key-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="14" width="4" height="6" rx="1" fill="#CC0000"/><rect x="9" y="10" width="4" height="10" rx="1" fill="#CC0000" opacity="0.8"/><rect x="15" y="6" width="4" height="14" rx="1" fill="#CC0000" opacity="0.6"/></svg></div>
+  <span class="brand-name">Apex Analytics</span>
+  <div class="brand-divider"></div>
+  <span class="brand-dept">Credit Risk Analytics &mdash; Risk Migration</span>
+  <a href="index.html" class="nav-link">&larr; All Dashboards</a>
+</div>
+<div class="dashboard">
+  <div class="header animate-in">
+    <div class="header-left">
+      <h1>Risk Migration Sankey</h1>
+      <div class="subtitle">Rating transition flows &mdash; Q4 2025 &rarr; Q1 2026</div>
+    </div>
+    <div class="period-label">Q4 2025 &rarr; Q1 2026</div>
+  </div>
+
+  <div class="filter-bar animate-in delay-1">
+    <div class="filter-group">
+      <span class="filter-label">LOB</span>
+      <button class="filter-btn active" data-filter="lob" data-value="all">All</button>
+      <button class="filter-btn" data-filter="lob" data-value="cre">CRE</button>
+      <button class="filter-btn" data-filter="lob" data-value="ci">C&I</button>
+      <button class="filter-btn" data-filter="lob" data-value="sbl">SBL</button>
+      <button class="filter-btn" data-filter="lob" data-value="mfl">Multifamily</button>
+    </div>
+  </div>
+
+  <div class="kpi-row animate-in delay-1" id="kpi-row"></div>
+
+  <div class="chart-card animate-in delay-2">
+    <div class="chart-title">Rating Migration Flow</div>
+    <div class="chart-desc">Each band shows the volume ($M) of exposure transitioning between risk ratings. Wider bands indicate larger migrations. Hover for details.</div>
+    <div id="sankey-chart"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="summary-grid animate-in delay-3">
+    <div class="chart-card">
+      <div class="chart-title">Migration Summary</div>
+      <div class="chart-desc">Net rating movement by category</div>
+      <div id="migration-table"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Transition Probability Matrix</div>
+      <div class="chart-desc">Probability of moving from one rating to another</div>
+      <div id="probability-table"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const RATINGS = ["Pass", "Watch", "Substandard", "Doubtful", "Loss"];
+const RATING_COLORS = {
+  "Pass": "#2e7d32",
+  "Watch": "#b8860b",
+  "Substandard": "#CC0000",
+  "Doubtful": "#990000",
+  "Loss": "#4a0000"
+};
+
+// Migration data by LOB: matrix[from][to] in $M
+const MIGRATION_DATA = {
+  all: {
+    matrix: [
+      [3200, 180, 42, 8, 2],   // From Pass
+      [85, 620, 95, 22, 5],    // From Watch
+      [15, 65, 410, 55, 18],   // From Substandard
+      [2, 8, 35, 185, 32],     // From Doubtful
+      [0, 1, 3, 12, 88]        // From Loss
+    ]
+  },
+  cre: {
+    matrix: [
+      [1280, 85, 22, 4, 1],
+      [35, 260, 45, 10, 2],
+      [6, 28, 175, 25, 8],
+      [1, 3, 15, 82, 15],
+      [0, 0, 1, 5, 38]
+    ]
+  },
+  ci: {
+    matrix: [
+      [1120, 55, 12, 2, 1],
+      [30, 210, 30, 8, 2],
+      [5, 22, 140, 18, 6],
+      [1, 3, 12, 62, 10],
+      [0, 1, 1, 4, 30]
+    ]
+  },
+  sbl: {
+    matrix: [
+      [420, 22, 5, 1, 0],
+      [12, 85, 12, 2, 1],
+      [2, 8, 52, 8, 3],
+      [0, 1, 5, 24, 4],
+      [0, 0, 1, 2, 12]
+    ]
+  },
+  mfl: {
+    matrix: [
+      [380, 18, 3, 1, 0],
+      [8, 65, 8, 2, 0],
+      [2, 7, 43, 4, 1],
+      [0, 1, 3, 17, 3],
+      [0, 0, 0, 1, 8]
+    ]
+  }
+};
+
+let state = { lob: "all" };
+
+const ttEl = document.getElementById('tooltip');
+function showTooltip(evt, html) {
+  ttEl.innerHTML = html;
+  ttEl.classList.add('visible');
+  ttEl.style.left = Math.min(evt.clientX + 12, window.innerWidth - 320) + 'px';
+  ttEl.style.top = Math.min(evt.clientY - 10, window.innerHeight - 100) + 'px';
+}
+function hideTooltip() { ttEl.classList.remove('visible'); }
+const fmtM = d => '$' + Math.abs(d).toLocaleString() + 'M';
+const fmtPct = d => (d >= 0 ? '+' : '') + d.toFixed(1) + '%';
+
+function getMatrix() { return MIGRATION_DATA[state.lob].matrix; }
+
+function renderKPIs() {
+  const matrix = getMatrix();
+  const totalExposure = matrix.flat().reduce((s, v) => s + v, 0);
+  const stayedSame = RATINGS.reduce((s, _, i) => s + matrix[i][i], 0);
+  const upgraded = RATINGS.reduce((s, _, i) => {
+    for (let j = 0; j < i; j++) s += matrix[i][j];
+    return s;
+  }, 0);
+  const downgraded = RATINGS.reduce((s, _, i) => {
+    for (let j = i + 1; j < RATINGS.length; j++) s += matrix[i][j];
+    return s;
+  }, 0);
+  const stabilityRate = (stayedSame / totalExposure * 100);
+
+  const kpis = [
+    { label: "Total Exposure", value: fmtM(totalExposure), sub: "rated portfolio", color: "#404040" },
+    { label: "Stable", value: fmtM(stayedSame), sub: fmtPct(0) + " migration", color: "#2e7d32" },
+    { label: "Upgraded", value: fmtM(upgraded), sub: "improved rating", color: "#1B6EC2" },
+    { label: "Downgraded", value: fmtM(downgraded), sub: "deteriorated", color: "#CC0000" },
+    { label: "Stability Rate", value: stabilityRate.toFixed(1) + '%', sub: "stayed in grade", color: "#b8860b" },
+  ];
+  document.getElementById('kpi-row').innerHTML = kpis.map(k =>
+    `<div class="kpi-card"><div class="kpi-bar" style="background:${k.color}"></div><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.value}</div><div class="kpi-sub" style="color:${k.color}">${k.sub}</div></div>`
+  ).join('');
+}
+
+function renderSankey() {
+  const container = document.getElementById('sankey-chart');
+  container.innerHTML = '';
+  const matrix = getMatrix();
+
+  // Build nodes: left side = "From X", right side = "To X"
+  const nodes = [];
+  RATINGS.forEach(r => nodes.push({ name: r + " (start)", rating: r, side: "from" }));
+  RATINGS.forEach(r => nodes.push({ name: r + " (end)", rating: r, side: "to" }));
+
+  // Build links: only off-diagonal flows (migrations)
+  const links = [];
+  matrix.forEach((row, i) => {
+    row.forEach((val, j) => {
+      if (val > 0) {
+        links.push({ source: i, target: RATINGS.length + j, value: val });
+      }
+    });
+  });
+
+  const width = container.clientWidth || 1000;
+  const height = 480;
+  const margin = { top: 10, right: 160, bottom: 10, left: 160 };
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('width', '100%');
+
+  const sankey = d3.sankey()
+    .nodeId(d => d.index)
+    .nodeWidth(20)
+    .nodePadding(18)
+    .nodeAlign(d3.sankeyJustify)
+    .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]]);
+
+  const graph = sankey({ nodes: nodes.map(d => ({ ...d })), links: links.map(d => ({ ...d })) });
+
+  // Links
+  svg.append('g').selectAll('.sankey-link')
+    .data(graph.links)
+    .join('path')
+    .attr('class', 'sankey-link')
+    .attr('d', d3.sankeyLinkHorizontal())
+    .attr('stroke', d => {
+      const fromIdx = d.source.index;
+      const toIdx = d.target.index - RATINGS.length;
+      if (toIdx > fromIdx) return RATING_COLORS[RATINGS[toIdx]]; // downgrade = target color
+      if (toIdx < fromIdx) return RATING_COLORS[RATINGS[fromIdx]]; // upgrade = source color
+      return RATING_COLORS[RATINGS[fromIdx]]; // stable
+    })
+    .attr('stroke-width', d => Math.max(1, d.width))
+    .attr('stroke-opacity', d => {
+      const fromIdx = d.source.index;
+      const toIdx = d.target.index - RATINGS.length;
+      return fromIdx === toIdx ? 0.2 : 0.4;
+    })
+    .on('mousemove', (evt, d) => {
+      const from = RATINGS[d.source.index];
+      const to = RATINGS[d.target.index - RATINGS.length];
+      const fromTotal = matrix[d.source.index].reduce((s, v) => s + v, 0);
+      const pct = (d.value / fromTotal * 100).toFixed(1);
+      showTooltip(evt, `<div class="tt-label">${from} &rarr; ${to}</div><div class="tt-value">${fmtM(d.value)}</div><div class="tt-sub">${pct}% of ${from} exposure</div>`);
+    })
+    .on('mouseleave', hideTooltip);
+
+  // Nodes
+  const nodeG = svg.append('g').selectAll('.sankey-node')
+    .data(graph.nodes)
+    .join('g')
+    .attr('class', 'sankey-node');
+
+  nodeG.append('rect')
+    .attr('x', d => d.x0)
+    .attr('y', d => d.y0)
+    .attr('height', d => Math.max(1, d.y1 - d.y0))
+    .attr('width', d => d.x1 - d.x0)
+    .attr('fill', d => RATING_COLORS[d.rating])
+    .attr('rx', 3)
+    .attr('opacity', 0.85)
+    .on('mousemove', (evt, d) => {
+      const total = d.value;
+      showTooltip(evt, `<div class="tt-label">${d.name}</div><div class="tt-value">${fmtM(total)}</div>`);
+    })
+    .on('mouseleave', hideTooltip);
+
+  // Labels
+  nodeG.append('text')
+    .attr('x', d => d.side === 'from' ? d.x0 - 8 : d.x1 + 8)
+    .attr('y', d => (d.y0 + d.y1) / 2)
+    .attr('dy', '0.35em')
+    .attr('text-anchor', d => d.side === 'from' ? 'end' : 'start')
+    .attr('font-size', 12)
+    .attr('font-weight', 600)
+    .attr('fill', d => RATING_COLORS[d.rating])
+    .text(d => d.rating);
+
+  nodeG.append('text')
+    .attr('x', d => d.side === 'from' ? d.x0 - 8 : d.x1 + 8)
+    .attr('y', d => (d.y0 + d.y1) / 2 + 16)
+    .attr('text-anchor', d => d.side === 'from' ? 'end' : 'start')
+    .attr('font-size', 10)
+    .attr('font-family', "'JetBrains Mono', monospace")
+    .attr('fill', '#767676')
+    .text(d => fmtM(d.value));
+
+  // Column labels
+  svg.append('text').attr('x', margin.left).attr('y', height - 2).attr('font-size', 11).attr('font-weight', 600).attr('fill', '#767676').text('FROM RATING');
+  svg.append('text').attr('x', width - margin.right).attr('y', height - 2).attr('text-anchor', 'end').attr('font-size', 11).attr('font-weight', 600).attr('fill', '#767676').text('TO RATING');
+
+  // Legend
+  document.getElementById('legend').innerHTML = [
+    { label: "Diagonal (stable)", desc: "Exposure that stayed in the same rating" },
+    { label: "Downgrade flow", desc: "Moved to a worse rating (right & down)" },
+    { label: "Upgrade flow", desc: "Moved to a better rating (right & up)" },
+  ].map((l, i) => `<div class="legend-item"><div class="legend-dot" style="background:${['#767676', '#CC0000', '#2e7d32'][i]}"></div>${l.label} — <span style="color:var(--text-muted)">${l.desc}</span></div>`).join('');
+}
+
+function renderMigrationTable() {
+  const matrix = getMatrix();
+  let html = '<table class="migration-table"><thead><tr><th>From Rating</th><th>Start ($M)</th><th>Stable ($M)</th><th>Upgraded ($M)</th><th>Downgraded ($M)</th><th>Stability %</th></tr></thead><tbody>';
+  RATINGS.forEach((r, i) => {
+    const rowTotal = matrix[i].reduce((s, v) => s + v, 0);
+    const stable = matrix[i][i];
+    const upgraded = matrix[i].slice(0, i).reduce((s, v) => s + v, 0);
+    const downgraded = matrix[i].slice(i + 1).reduce((s, v) => s + v, 0);
+    const stabilityPct = (stable / rowTotal * 100).toFixed(1);
+    html += `<tr><td>${r}</td><td>${rowTotal.toLocaleString()}</td><td>${stable.toLocaleString()}</td><td style="color:#1B6EC2">${upgraded.toLocaleString()}</td><td style="color:#CC0000">${downgraded.toLocaleString()}</td><td>${stabilityPct}%</td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('migration-table').innerHTML = html;
+}
+
+function renderProbabilityTable() {
+  const matrix = getMatrix();
+  let html = '<table class="migration-table"><thead><tr><th>From \\ To</th>';
+  RATINGS.forEach(r => html += `<th>${r}</th>`);
+  html += '</tr></thead><tbody>';
+  matrix.forEach((row, i) => {
+    const rowTotal = row.reduce((s, v) => s + v, 0);
+    html += `<tr><td>${RATINGS[i]}</td>`;
+    row.forEach((val, j) => {
+      const pct = (val / rowTotal * 100).toFixed(1);
+      const style = i === j ? 'font-weight:600;color:#1a1a1a' : val > 0 ? (j > i ? 'color:#CC0000' : 'color:#2e7d32') : 'color:#ccc';
+      html += `<td style="${style}">${pct}%</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('probability-table').innerHTML = html;
+}
+
+// Filter handlers
+document.querySelectorAll('.filter-btn[data-filter="lob"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn[data-filter="lob"]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.lob = btn.dataset.value;
+    renderAll();
+  });
+});
+
+function renderAll() { renderKPIs(); renderSankey(); renderMigrationTable(); renderProbabilityTable(); }
+let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderAll, 200); });
+renderAll();
+</script>
+</body>
+</html>

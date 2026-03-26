@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex Analytics — Interactive Dashboard Suite</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg-primary:#f0f0f0; --bg-card:#ffffff; --border:#dcdcdc; --border-accent:#c0c0c0; --text-primary:#1a1a1a; --text-secondary:#555555; --text-muted:#767676; --accent-red:#CC0000; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; }
+  .brand-bar { background:#CC0000; height:4px; }
+  .brand-header { background:#fff; border-bottom:1px solid var(--border); padding:14px 40px; display:flex; align-items:center; gap:14px; }
+  .brand-key-icon { width:28px; height:28px; display:flex; align-items:center; justify-content:center; }
+  .brand-name { font-size:15px; font-weight:700; letter-spacing:-0.3px; }
+  .brand-divider { width:1px; height:20px; background:#d4d4d4; }
+  .brand-dept { font-size:12px; color:var(--text-muted); font-weight:500; }
+  .dashboard { max-width:1200px; margin:0 auto; padding:48px 40px; }
+  .hero { text-align:center; margin-bottom:48px; }
+  .hero h1 { font-size:34px; font-weight:700; letter-spacing:-0.8px; margin-bottom:8px; }
+  .hero .subtitle { font-size:15px; color:var(--text-muted); max-width:600px; margin:0 auto; line-height:1.6; }
+  .hero .tech-badge { display:inline-block; margin-top:16px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent-red); background:rgba(204,0,0,0.06); padding:6px 16px; border-radius:6px; border:1px solid rgba(204,0,0,0.2); }
+  .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:28px; text-decoration:none; color:inherit; transition:all 0.3s; position:relative; overflow:hidden; display:flex; flex-direction:column; }
+  .card:hover { border-color:var(--accent-red); transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.06); }
+  .card-bar { position:absolute; top:0; left:0; width:100%; height:3px; background:var(--accent-red); opacity:0; transition:opacity 0.3s; }
+  .card:hover .card-bar { opacity:1; }
+  .card-icon { width:48px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; flex-shrink:0; }
+  .card-title { font-size:16px; font-weight:700; margin-bottom:6px; }
+  .card-desc { font-size:13px; color:var(--text-muted); line-height:1.5; flex:1; }
+  .card-tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:14px; }
+  .card-tag { font-family:'JetBrains Mono',monospace; font-size:10px; padding:3px 8px; border-radius:4px; background:var(--bg-primary); color:var(--text-muted); border:1px solid var(--border); }
+  .footer { text-align:center; margin-top:56px; padding-top:24px; border-top:1px solid var(--border); }
+  .footer p { font-size:12px; color:var(--text-muted); line-height:1.8; }
+  .footer .highlight { color:var(--accent-red); font-weight:600; }
+  @keyframes fadeInUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  .animate-in { animation:fadeInUp 0.6s ease-out forwards; opacity:0; }
+  .delay-1 { animation-delay:0.1s; } .delay-2 { animation-delay:0.15s; } .delay-3 { animation-delay:0.2s; }
+  .delay-4 { animation-delay:0.25s; } .delay-5 { animation-delay:0.3s; } .delay-6 { animation-delay:0.35s; }
+  @media (max-width:900px) { .cards { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="brand-bar"></div>
+<div class="brand-header">
+  <div class="brand-key-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="14" width="4" height="6" rx="1" fill="#CC0000"/><rect x="9" y="10" width="4" height="10" rx="1" fill="#CC0000" opacity="0.8"/><rect x="15" y="6" width="4" height="14" rx="1" fill="#CC0000" opacity="0.6"/></svg></div>
+  <span class="brand-name">Apex Analytics</span>
+  <div class="brand-divider"></div>
+  <span class="brand-dept">Interactive Dashboard Suite</span>
+</div>
+<div class="dashboard">
+  <div class="hero animate-in">
+    <h1>Analytics Dashboard Suite</h1>
+    <p class="subtitle">Six interactive dashboards built with pure HTML, CSS, and D3.js — no server required. Each visualization is a self-contained file that runs anywhere, including SharePoint.</p>
+    <div class="tech-badge">Built with Claude Code &middot; D3.js v7 &middot; Zero Dependencies</div>
+  </div>
+
+  <div class="cards">
+    <a href="viz.html" class="card animate-in delay-1">
+      <div class="card-bar"></div>
+      <div class="card-icon" style="background:rgba(204,0,0,0.06)">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="16" width="4" height="8" rx="1" fill="#CC0000" opacity="0.5"/><rect x="10" y="12" width="4" height="12" rx="1" fill="#CC0000" opacity="0.7"/><rect x="16" y="8" width="4" height="16" rx="1" fill="#CC0000" opacity="0.85"/><rect x="22" y="4" width="4" height="20" rx="1" fill="#CC0000"/></svg>
+      </div>
+      <div class="card-title">Portfolio Flow Analysis</div>
+      <div class="card-desc">Waterfall bridge, period-over-period flows, industry detail table with drill-down panel, risk migration heatmap, and time series trends.</div>
+      <div class="card-tags"><span class="card-tag">Waterfall</span><span class="card-tag">Heatmap</span><span class="card-tag">Time Series</span><span class="card-tag">Drill-down</span></div>
+    </a>
+    <a href="sankey.html" class="card animate-in delay-2">
+      <div class="card-bar"></div>
+      <div class="card-icon" style="background:rgba(46,125,50,0.06)">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M4 6 C10 6, 14 14, 24 10" stroke="#2e7d32" stroke-width="3" fill="none" opacity="0.4"/><path d="M4 14 C10 14, 14 18, 24 16" stroke="#2e7d32" stroke-width="5" fill="none" opacity="0.6"/><path d="M4 22 C10 22, 14 20, 24 22" stroke="#2e7d32" stroke-width="2" fill="none" opacity="0.8"/></svg>
+      </div>
+      <div class="card-title">Risk Migration Sankey</div>
+      <div class="card-desc">Flow diagram showing rating transitions between periods. Visualizes upgrades, downgrades, and stability across the full rating spectrum.</div>
+      <div class="card-tags"><span class="card-tag">Sankey</span><span class="card-tag">Migration Matrix</span><span class="card-tag">Transition Probabilities</span></div>
+    </a>
+    <a href="scatter.html" class="card animate-in delay-3">
+      <div class="card-bar"></div>
+      <div class="card-icon" style="background:rgba(184,134,11,0.06)">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="8" cy="18" r="3" fill="#b8860b" opacity="0.5"/><circle cx="14" cy="10" r="5" fill="#b8860b" opacity="0.7"/><circle cx="22" cy="14" r="4" fill="#b8860b" opacity="0.85"/><circle cx="18" cy="22" r="2.5" fill="#b8860b"/></svg>
+      </div>
+      <div class="card-title">Risk-Return Scatter</div>
+      <div class="card-desc">Bubble plot positioning industry segments by risk rating vs. spread, sized by exposure. Quadrant analysis identifies optimal and concerning segments.</div>
+      <div class="card-tags"><span class="card-tag">Scatter</span><span class="card-tag">Bubble</span><span class="card-tag">Quadrant</span><span class="card-tag">Risk-Adjusted</span></div>
+    </a>
+    <a href="treemap.html" class="card animate-in delay-4">
+      <div class="card-bar"></div>
+      <div class="card-icon" style="background:rgba(92,61,110,0.06)">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="3" y="3" width="12" height="14" rx="2" fill="#5c3d6e" opacity="0.7"/><rect x="17" y="3" width="8" height="8" rx="2" fill="#5c3d6e" opacity="0.5"/><rect x="17" y="13" width="8" height="4" rx="1" fill="#5c3d6e" opacity="0.4"/><rect x="3" y="19" width="7" height="6" rx="1" fill="#5c3d6e" opacity="0.6"/><rect x="12" y="19" width="13" height="6" rx="1" fill="#5c3d6e" opacity="0.3"/></svg>
+      </div>
+      <div class="card-title">Portfolio Composition</div>
+      <div class="card-desc">Hierarchical treemap with click-to-zoom from LOB to industry to individual obligors. Color-coded by risk rating, sized by exposure.</div>
+      <div class="card-tags"><span class="card-tag">Treemap</span><span class="card-tag">Hierarchical</span><span class="card-tag">Zoomable</span><span class="card-tag">Breadcrumb</span></div>
+    </a>
+    <a href="geo.html" class="card animate-in delay-5">
+      <div class="card-bar"></div>
+      <div class="card-icon" style="background:rgba(27,110,194,0.06)">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M14 3C8.5 3 4 7.5 4 13c0 7 10 12 10 12s10-5 10-12c0-5.5-4.5-10-10-10z" fill="#1B6EC2" opacity="0.2"/><circle cx="14" cy="12" r="4" fill="#1B6EC2" opacity="0.7"/></svg>
+      </div>
+      <div class="card-title">Geographic Concentration</div>
+      <div class="card-desc">US choropleth map showing state-level exposure distribution. Toggle between exposure, risk rating, and quarter-over-quarter change views.</div>
+      <div class="card-tags"><span class="card-tag">Choropleth</span><span class="card-tag">TopoJSON</span><span class="card-tag">Regional</span><span class="card-tag">Multi-view</span></div>
+    </a>
+    <a href="gauges.html" class="card animate-in delay-6">
+      <div class="card-bar"></div>
+      <div class="card-icon" style="background:rgba(204,0,0,0.06)">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M6 20 A8 8 0 0 1 22 20" stroke="#CC0000" stroke-width="3" fill="none" opacity="0.3" stroke-linecap="round"/><path d="M6 20 A8 8 0 0 1 18 13" stroke="#CC0000" stroke-width="3" fill="none" opacity="0.7" stroke-linecap="round"/><line x1="14" y1="20" x2="17" y2="14" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/><circle cx="14" cy="20" r="2" fill="#1a1a1a"/></svg>
+      </div>
+      <div class="card-title">Portfolio Health Dashboard</div>
+      <div class="card-desc">Gauge meters for health scores, donut charts for limit utilization, and sparkline trends. At-a-glance executive summary of portfolio risk posture.</div>
+      <div class="card-tags"><span class="card-tag">Gauges</span><span class="card-tag">Donuts</span><span class="card-tag">Sparklines</span><span class="card-tag">KPI</span></div>
+    </a>
+  </div>
+
+  <div class="footer animate-in delay-6">
+    <p>Each dashboard is a <span class="highlight">single self-contained HTML file</span> — no build step, no server, no dependencies beyond a CDN link to D3.js.</p>
+    <p>Runs on SharePoint, local file system, or any static hosting. <span class="highlight">Generated with Claude Code</span> in minutes, not weeks.</p>
+  </div>
+</div>
+</body>
+</html>

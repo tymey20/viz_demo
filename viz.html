@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Flow Analysis — Apex Analytics Demo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --key-red: #CC0000;
+    --key-red-dark: #990000;
+    --key-red-light: #E63333;
+    --key-red-dim: rgba(204,0,0,0.06);
+    --key-red-dim2: rgba(204,0,0,0.12);
+    --bg-primary: #f0f0f0;
+    --bg-card: #ffffff;
+    --bg-card-hover: #fafafa;
+    --border: #dcdcdc;
+    --border-accent: #c0c0c0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #555555;
+    --text-muted: #767676;
+    --accent-green: #2e7d32;
+    --accent-green-dim: rgba(46,125,50,0.08);
+    --accent-red: #CC0000;
+    --accent-red-dim: rgba(204,0,0,0.06);
+    --accent-amber: #b8860b;
+    --waterfall-start: #404040;
+    --waterfall-outflow: #CC0000;
+    --waterfall-aq: #b8860b;
+    --waterfall-nbv: #2e7d32;
+    --waterfall-end: #1a1a1a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; }
+  .brand-bar { background: var(--key-red); height: 4px; width: 100%; }
+  .brand-header { background: #fff; border-bottom: 1px solid var(--border); padding: 14px 40px; display: flex; align-items: center; gap: 14px; }
+  .brand-key-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+  .brand-key-icon svg { width: 24px; height: 24px; }
+  .brand-name { font-size: 15px; font-weight: 700; color: #1a1a1a; letter-spacing: -0.3px; }
+  .brand-divider { width: 1px; height: 20px; background: #d4d4d4; }
+  .brand-dept { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .dashboard { max-width: 1440px; margin: 0 auto; padding: 32px 40px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+  .header-left h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .header-left .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+  .period-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--key-red); background: var(--key-red-dim); padding: 6px 14px; border-radius: 6px; border: 1px solid rgba(204,0,0,0.2); }
+  .filter-bar { display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap; align-items: center; }
+  .filter-group { display: flex; align-items: center; gap: 8px; }
+  .filter-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 600; }
+  .filter-btn { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary); cursor: pointer; transition: all 0.2s; }
+  .filter-btn:hover { border-color: var(--border-accent); color: var(--text-primary); }
+  .filter-btn.active { background: var(--key-red-dim2); border-color: var(--key-red); color: var(--key-red); }
+  .divider-v { width: 1px; height: 24px; background: var(--border); margin: 0 8px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 28px; }
+  .kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden; transition: all 0.25s; }
+  .kpi-card:hover { border-color: var(--border-accent); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  .kpi-card .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; }
+  .kpi-card .kpi-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 600; }
+  .kpi-card .kpi-sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-top: 4px; }
+  .kpi-card .kpi-bar { position: absolute; top: 0; left: 0; width: 100%; height: 3px; }
+  .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .chart-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; transition: border-color 0.25s; }
+  .chart-card:hover { border-color: var(--border-accent); }
+  .chart-card.full-width { grid-column: 1 / -1; }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .chart-title { font-size: 14px; font-weight: 600; }
+  .chart-toggle { display: flex; gap: 4px; background: var(--bg-primary); padding: 3px; border-radius: 6px; }
+  .toggle-btn { font-family: 'DM Sans', sans-serif; font-size: 11px; padding: 4px 12px; border: none; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s; font-weight: 500; }
+  .toggle-btn.active { background: var(--bg-card); color: var(--text-primary); }
+  .waterfall-svg text, .ts-svg text { font-family: 'JetBrains Mono', monospace; }
+  .flow-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  .flow-table thead th { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 600; padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-card); }
+  .flow-table thead th:first-child { text-align: left; }
+  .flow-table tbody td { font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 10px 12px; text-align: right; border-bottom: 1px solid rgba(220,220,220,0.5); color: var(--text-secondary); transition: background 0.15s; }
+  .flow-table tbody tr:hover td { background: rgba(204,0,0,0.03); }
+  .flow-table tbody td:first-child { font-family: 'DM Sans', sans-serif; font-weight: 600; color: var(--text-primary); text-align: left; }
+  .flow-table tbody tr.total-row td { border-top: 2px solid var(--border-accent); font-weight: 600; color: var(--text-primary); }
+  .flow-table tbody tr.clickable-row { cursor: pointer; }
+  .flow-table tbody tr.clickable-row:hover td { background: rgba(204,0,0,0.06); }
+  .flow-table tbody tr.clickable-row td:first-child { position: relative; padding-left: 22px; }
+  .flow-table tbody tr.clickable-row td:first-child::before { content: '\25B8'; position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--key-red); font-size: 10px; transition: transform 0.2s; }
+  .neg { color: var(--accent-red) !important; }
+  .pos { color: var(--accent-green) !important; }
+  .pct-badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
+  .pct-badge.neg { background: var(--accent-red-dim); }
+  .pct-badge.pos { background: var(--accent-green-dim); }
+
+  /* Drill-down panel */
+  .drilldown-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,0.3); z-index: 100; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .drilldown-overlay.open { opacity: 1; pointer-events: all; }
+  .drilldown-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 720px; background: #fff; z-index: 101; transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.16,1,0.3,1); display: flex; flex-direction: column; box-shadow: -8px 0 40px rgba(0,0,0,0.12); }
+  .drilldown-panel.open { transform: translateX(0); }
+  .drilldown-header { padding: 20px 28px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .drilldown-header h2 { font-size: 18px; font-weight: 700; }
+  .drilldown-header .dd-subtitle { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+  .drilldown-close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text-muted); transition: all 0.2s; }
+  .drilldown-close:hover { border-color: var(--key-red); color: var(--key-red); background: var(--key-red-dim); }
+  .drilldown-body { flex: 1; overflow-y: auto; padding: 24px 28px; }
+  .dd-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+  .dd-kpi { background: var(--bg-primary); border-radius: 8px; padding: 12px 14px; border: 1px solid var(--border); }
+  .dd-kpi .dd-kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 600; }
+  .dd-kpi .dd-kpi-value { font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 600; margin-top: 4px; }
+  .dd-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .dd-section { margin-bottom: 28px; }
+
+  .obligor-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; }
+  .obligor-table thead th { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 600; padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--border); background: #fff; position: sticky; top: 0; cursor: pointer; user-select: none; }
+  .obligor-table thead th:first-child { text-align: left; }
+  .obligor-table thead th:hover { color: var(--text-primary); }
+  .obligor-table tbody td { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 8px 10px; text-align: right; border-bottom: 1px solid rgba(220,220,220,0.4); color: var(--text-secondary); }
+  .obligor-table tbody tr:hover td { background: rgba(204,0,0,0.03); }
+  .obligor-table tbody td:first-child { font-family: 'DM Sans', sans-serif; font-weight: 500; color: var(--text-primary); text-align: left; }
+  .risk-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
+  .risk-pass { background: rgba(46,125,50,0.08); color: #2e7d32; }
+  .risk-watch { background: rgba(184,134,11,0.08); color: #b8860b; }
+  .risk-sub { background: rgba(204,0,0,0.06); color: #CC0000; }
+  .risk-doubtful { background: rgba(204,0,0,0.12); color: #990000; }
+  .flow-tag { display: inline-block; font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 6px; }
+  .flow-tag.outflow { background: rgba(204,0,0,0.08); color: #CC0000; }
+  .flow-tag.nbv { background: rgba(46,125,50,0.08); color: #2e7d32; }
+  .flow-tag.aq-up { background: rgba(184,134,11,0.08); color: #b8860b; }
+  .flow-tag.aq-down { background: rgba(46,125,50,0.08); color: #2e7d32; }
+
+  .heatmap-cell { border-radius: 4px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; transition: all 0.2s; cursor: default; position: relative; }
+  .heatmap-cell:hover { transform: scale(1.05); z-index: 2; }
+  .heatmap-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 600; }
+  .ts-line { fill: none; stroke-width: 2; stroke-linecap: round; }
+  .ts-area { opacity: 0.08; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); cursor: pointer; }
+  .legend-item:hover { color: var(--text-secondary); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+  .tooltip { position: fixed; pointer-events: none; background: rgba(26,26,26,0.94); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #fff; z-index: 1000; backdrop-filter: blur(8px); opacity: 0; transition: opacity 0.15s; max-width: 260px; }
+  .tooltip.visible { opacity: 1; }
+  .tooltip .tt-label { font-size: 10px; color: #b5b5b5; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .tooltip .tt-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; }
+  .tooltip .tt-sub { font-size: 11px; color: #d4d4d4; margin-top: 2px; }
+  .table-scroll { max-height: 380px; overflow-y: auto; }
+  .table-scroll::-webkit-scrollbar { width: 4px; }
+  .table-scroll::-webkit-scrollbar-track { background: transparent; }
+  .table-scroll::-webkit-scrollbar-thumb { background: #c0c0c0; border-radius: 2px; }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .animate-in { animation: fadeInUp 0.5s ease-out forwards; opacity: 0; }
+  .delay-1 { animation-delay: 0.05s; } .delay-2 { animation-delay: 0.1s; } .delay-3 { animation-delay: 0.15s; } .delay-4 { animation-delay: 0.2s; } .delay-5 { animation-delay: 0.25s; } .delay-6 { animation-delay: 0.3s; }
+  @media (max-width: 1200px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } .main-grid { grid-template-columns: 1fr; } .drilldown-panel { width: 100%; } }
+</style>
+</head>
+<body>
+<div class="brand-bar"></div>
+<div class="brand-header">
+  <div class="brand-key-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="14" width="4" height="6" rx="1" fill="#CC0000"/><rect x="9" y="10" width="4" height="10" rx="1" fill="#CC0000" opacity="0.8"/><rect x="15" y="6" width="4" height="14" rx="1" fill="#CC0000" opacity="0.6"/></svg></div>
+  <span class="brand-name">Apex Analytics</span>
+  <div class="brand-divider"></div>
+  <span class="brand-dept">Credit Risk Analytics &mdash; Quantitative Analysis</span>
+</div>
+<div class="dashboard">
+  <div class="header animate-in">
+    <div class="header-left"><h1>Portfolio Flow Analysis</h1><div class="subtitle">Commercial Credit &mdash; Period-over-Period Bridge</div></div>
+    <div class="period-label">Q4 2025 &rarr; Q1 2026</div>
+  </div>
+  <div class="filter-bar animate-in delay-1">
+    <div class="filter-group">
+      <span class="filter-label">LOB</span>
+      <button class="filter-btn active" data-filter="lob" data-value="all">All</button>
+      <button class="filter-btn" data-filter="lob" data-value="cre">CRE</button>
+      <button class="filter-btn" data-filter="lob" data-value="ci">C&I</button>
+      <button class="filter-btn" data-filter="lob" data-value="sbl">SBL</button>
+      <button class="filter-btn" data-filter="lob" data-value="mfl">Multifamily</button>
+    </div>
+    <div class="divider-v"></div>
+    <div class="filter-group">
+      <span class="filter-label">View</span>
+      <button class="filter-btn active" data-filter="view" data-value="industry">Industry</button>
+      <button class="filter-btn" data-filter="view" data-value="severity">Severity</button>
+    </div>
+  </div>
+  <div class="kpi-row" id="kpi-row"></div>
+  <div class="main-grid">
+    <div class="chart-card full-width animate-in delay-3" id="waterfall-card">
+      <div class="chart-header">
+        <span class="chart-title">Portfolio Bridge &mdash; Balance Flow ($M)</span>
+        <div class="chart-toggle"><button class="toggle-btn active" data-mode="dollar">$</button><button class="toggle-btn" data-mode="pct">%</button></div>
+      </div>
+      <div id="waterfall-chart"></div>
+    </div>
+    <div class="chart-card animate-in delay-4" id="detail-card">
+      <div class="chart-header">
+        <span class="chart-title" id="detail-title">Industry Detail</span>
+        <span style="font-size:10px;color:var(--key-red);font-weight:500;cursor:default">Click row to drill in &rarr;</span>
+      </div>
+      <div class="table-scroll" id="detail-table"></div>
+    </div>
+    <div class="chart-card animate-in delay-5" id="severity-card">
+      <div class="chart-header"><span class="chart-title">Risk Migration Heatmap</span></div>
+      <div id="severity-heatmap"></div>
+    </div>
+    <div class="chart-card full-width animate-in delay-6" id="timeseries-card">
+      <div class="chart-header">
+        <span class="chart-title">Attribute Time Series &mdash; Trailing 8 Quarters</span>
+        <div class="chart-toggle" id="ts-toggle"><button class="toggle-btn active" data-ts="balance">Balance</button><button class="toggle-btn" data-ts="concentration">Concentration</button><button class="toggle-btn" data-ts="aq">Avg Risk</button></div>
+      </div>
+      <div id="timeseries-chart"></div>
+      <div class="legend" id="ts-legend"></div>
+    </div>
+  </div>
+</div>
+
+<div class="drilldown-overlay" id="dd-overlay"></div>
+<div class="drilldown-panel" id="dd-panel">
+  <div class="drilldown-header">
+    <div><h2 id="dd-title"></h2><div class="dd-subtitle" id="dd-subtitle"></div></div>
+    <button class="drilldown-close" id="dd-close">&times;</button>
+  </div>
+  <div class="drilldown-body" id="dd-body"></div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// Obligor data by industry
+const OBLIGOR_DATA = {
+  "Healthcare": [
+    {name:"Mercy Health Partners",bal:145,risk:"Pass",flow:"static"},{name:"Pinnacle Medical Group",bal:112,risk:"Pass",flow:"static"},
+    {name:"CareFirst Regional Hospital",bal:98,risk:"Watch",flow:"aq-up"},{name:"NovaCare Rehabilitation",bal:88,risk:"Pass",flow:"nbv"},
+    {name:"Tri-County Health Systems",bal:82,risk:"Pass",flow:"static"},{name:"Summit Behavioral Health",bal:75,risk:"Pass",flow:"nbv"},
+    {name:"Heartland Senior Living",bal:65,risk:"Watch",flow:"aq-up"},{name:"Pacific Dental Partners",bal:52,risk:"Pass",flow:"nbv"},
+    {name:"Apex Urgent Care Holdings",bal:42,risk:"Substandard",flow:"aq-up"},{name:"Lakeview Specialty Clinic",bal:38,risk:"Pass",flow:"outflow"},
+    {name:"Genesis Therapeutics Inc",bal:35,risk:"Pass",flow:"outflow"},{name:"Prairie Health Network",bal:22,risk:"Pass",flow:"outflow"},
+  ],
+  "Technology": [
+    {name:"Nexus Cloud Solutions",bal:120,risk:"Pass",flow:"nbv"},{name:"Veristream Data Corp",bal:105,risk:"Pass",flow:"static"},
+    {name:"Quantum Edge AI",bal:95,risk:"Pass",flow:"nbv"},{name:"CyberVault Security",bal:88,risk:"Pass",flow:"static"},
+    {name:"DataPulse Analytics",bal:78,risk:"Pass",flow:"static"},{name:"TechBridge Platforms",bal:65,risk:"Pass",flow:"aq-down"},
+    {name:"CloudForge Inc",bal:55,risk:"Pass",flow:"static"},{name:"Sentinel IoT Systems",bal:48,risk:"Pass",flow:"nbv"},
+    {name:"AeroCode Software",bal:40,risk:"Pass",flow:"outflow"},{name:"Brightpath DevOps",bal:34,risk:"Pass",flow:"static"},
+  ],
+  "Manufacturing": [
+    {name:"Ironworks Precision Mfg",bal:95,risk:"Watch",flow:"aq-up"},{name:"Cascade Metals Group",bal:88,risk:"Pass",flow:"static"},
+    {name:"Heartland Plastics Inc",bal:72,risk:"Substandard",flow:"aq-up"},{name:"Summit Tooling Corp",bal:65,risk:"Pass",flow:"static"},
+    {name:"Great Lakes Fabrication",bal:55,risk:"Watch",flow:"aq-up"},{name:"Atlas Components LLC",bal:48,risk:"Pass",flow:"nbv"},
+    {name:"Pioneer Industrial",bal:42,risk:"Pass",flow:"outflow"},{name:"Midwest Stamping Co",bal:38,risk:"Pass",flow:"outflow"},
+    {name:"Precision CNC Holdings",bal:20,risk:"Pass",flow:"outflow"},{name:"Ridgeline Assembly",bal:17,risk:"Pass",flow:"nbv"},
+  ],
+  "Retail Trade": [
+    {name:"Grandview Retail Partners",bal:78,risk:"Watch",flow:"aq-up"},{name:"Sterling Home Furnishings",bal:65,risk:"Substandard",flow:"aq-up"},
+    {name:"BrightMart Holdings",bal:52,risk:"Pass",flow:"outflow"},{name:"Northern Outlet Group",bal:48,risk:"Watch",flow:"static"},
+    {name:"Riverdale Auto Parts",bal:42,risk:"Pass",flow:"static"},{name:"Peak Sporting Goods",bal:35,risk:"Pass",flow:"outflow"},
+    {name:"Harbor General Store",bal:30,risk:"Pass",flow:"nbv"},{name:"Main Street Brands",bal:28,risk:"Pass",flow:"outflow"},
+    {name:"Cornerstone Apparel",bal:22,risk:"Pass",flow:"static"},{name:"Elm Street Grocers",bal:10,risk:"Pass",flow:"static"},
+  ],
+  "Office": [
+    {name:"Metro Tower Partners",bal:155,risk:"Substandard",flow:"aq-up"},{name:"Civic Center Properties",bal:128,risk:"Watch",flow:"aq-up"},
+    {name:"Lakefront Office REIT",bal:110,risk:"Watch",flow:"static"},{name:"Cornerstone Business Park",bal:95,risk:"Pass",flow:"outflow"},
+    {name:"Gateway Tower Holdings",bal:82,risk:"Substandard",flow:"aq-up"},{name:"Meridian Plaza LLC",bal:68,risk:"Pass",flow:"static"},
+    {name:"Harbor View Office",bal:55,risk:"Pass",flow:"outflow"},{name:"Summit Ridge Campus",bal:45,risk:"Pass",flow:"nbv"},
+    {name:"Crossroads Commercial",bal:22,risk:"Pass",flow:"outflow"},{name:"Innovation Hub Realty",bal:20,risk:"Pass",flow:"static"},
+  ],
+  "Industrial": [
+    {name:"Great Lakes Logistics Park",bal:110,risk:"Pass",flow:"nbv"},{name:"Midwest Distribution Hub",bal:95,risk:"Pass",flow:"static"},
+    {name:"Central Corridor Warehousing",bal:82,risk:"Pass",flow:"nbv"},{name:"Buckeye Flex Space",bal:68,risk:"Pass",flow:"static"},
+    {name:"Pinnacle Cold Storage",bal:62,risk:"Pass",flow:"aq-down"},{name:"Northern Industrial REIT",bal:55,risk:"Pass",flow:"static"},
+    {name:"CrossDock Partners",bal:48,risk:"Pass",flow:"nbv"},{name:"Heartland Last Mile",bal:40,risk:"Pass",flow:"outflow"},
+    {name:"Summit Fulfillment",bal:30,risk:"Pass",flow:"static"},
+  ],
+  "Retail CRE": [
+    {name:"Towne Centre Mall LP",bal:72,risk:"Substandard",flow:"aq-up"},{name:"Heritage Shopping Plaza",bal:58,risk:"Watch",flow:"static"},
+    {name:"Crossroads Retail REIT",bal:52,risk:"Pass",flow:"outflow"},{name:"Maple Grove Strip Center",bal:45,risk:"Pass",flow:"static"},
+    {name:"Lakeshore Marketplace",bal:38,risk:"Pass",flow:"nbv"},{name:"Eastgate Commons",bal:35,risk:"Watch",flow:"aq-up"},
+    {name:"Valley View Retail",bal:22,risk:"Pass",flow:"outflow"},{name:"Sunridge Shops",bal:18,risk:"Pass",flow:"static"},
+  ],
+  "Hospitality": [
+    {name:"Lakeshore Resort Group",bal:65,risk:"Pass",flow:"static"},{name:"Heritage Inn Collection",bal:55,risk:"Watch",flow:"aq-down"},
+    {name:"Metro Select Hotels",bal:48,risk:"Pass",flow:"nbv"},{name:"Cascade Lodge Partners",bal:42,risk:"Pass",flow:"static"},
+    {name:"Riverfront Hospitality",bal:38,risk:"Pass",flow:"outflow"},{name:"Bayview Conference Center",bal:25,risk:"Pass",flow:"nbv"},
+    {name:"Summit Stay Hotels",bal:17,risk:"Pass",flow:"outflow"},
+  ],
+  "Prof Services": [
+    {name:"Meridian Law Partners",bal:48,risk:"Pass",flow:"nbv"},{name:"Cornerstone CPA Group",bal:42,risk:"Pass",flow:"static"},
+    {name:"Summit Advisory LLC",bal:35,risk:"Pass",flow:"nbv"},{name:"Lakeview Engineering",bal:28,risk:"Pass",flow:"static"},
+    {name:"Brightpath Consulting",bal:22,risk:"Pass",flow:"outflow"},{name:"Apex Marketing Group",bal:15,risk:"Watch",flow:"aq-up"},
+  ],
+  "Restaurants": [
+    {name:"Great Lakes Restaurant Grp",bal:32,risk:"Substandard",flow:"aq-up"},{name:"Metro Dining Holdings",bal:25,risk:"Watch",flow:"static"},
+    {name:"Fireside Grill Concepts",bal:20,risk:"Pass",flow:"outflow"},{name:"Harbor Fresh Inc",bal:18,risk:"Pass",flow:"nbv"},
+    {name:"Cornerstone Catering",bal:15,risk:"Watch",flow:"aq-up"},{name:"Sunrise Bakery Chain",bal:10,risk:"Pass",flow:"outflow"},
+  ],
+  "Multifamily A": [
+    {name:"Parkview Apartments REIT",bal:135,risk:"Pass",flow:"static"},{name:"Metro Living Partners",bal:115,risk:"Pass",flow:"nbv"},
+    {name:"Lakewood Residential",bal:98,risk:"Pass",flow:"static"},{name:"Summit View Apartments",bal:85,risk:"Pass",flow:"nbv"},
+    {name:"Heritage Garden Homes",bal:72,risk:"Pass",flow:"aq-down"},{name:"Crossroads Multi-Family",bal:62,risk:"Pass",flow:"static"},
+    {name:"Riverside Community LP",bal:48,risk:"Pass",flow:"outflow"},{name:"Northgate Residential",bal:35,risk:"Pass",flow:"nbv"},
+    {name:"Bayview Living Trust",bal:13,risk:"Pass",flow:"static"},
+  ],
+  "Multifamily B": [
+    {name:"Eastside Housing Group",bal:85,risk:"Pass",flow:"static"},{name:"Willowbrook Apartments",bal:72,risk:"Pass",flow:"nbv"},
+    {name:"Gateway Residences",bal:58,risk:"Watch",flow:"aq-up"},{name:"Central Park Estates",bal:52,risk:"Pass",flow:"static"},
+    {name:"Cedar Grove Living",bal:45,risk:"Pass",flow:"nbv"},{name:"Hilltop Apartment Group",bal:38,risk:"Pass",flow:"outflow"},
+    {name:"Oakmont Housing LP",bal:30,risk:"Pass",flow:"outflow"},
+  ],
+};
+
+const DATA = {
+  industries: [
+    {name:"Healthcare",lob:"ci",start:820,outflow:-95,aq:-12,nbv:140,riskStart:3.2,riskEnd:3.4},
+    {name:"Technology",lob:"ci",start:650,outflow:-40,aq:8,nbv:110,riskStart:2.8,riskEnd:2.6},
+    {name:"Manufacturing",lob:"ci",start:540,outflow:-70,aq:-22,nbv:55,riskStart:4.1,riskEnd:4.4},
+    {name:"Retail Trade",lob:"ci",start:410,outflow:-85,aq:-18,nbv:30,riskStart:4.5,riskEnd:4.8},
+    {name:"Office",lob:"cre",start:780,outflow:-120,aq:-35,nbv:45,riskStart:5.2,riskEnd:5.6},
+    {name:"Industrial",lob:"cre",start:520,outflow:-30,aq:5,nbv:95,riskStart:3.0,riskEnd:2.9},
+    {name:"Retail CRE",lob:"cre",start:340,outflow:-55,aq:-15,nbv:20,riskStart:4.8,riskEnd:5.1},
+    {name:"Hospitality",lob:"cre",start:290,outflow:-25,aq:-8,nbv:35,riskStart:4.0,riskEnd:3.8},
+    {name:"Prof Services",lob:"sbl",start:180,outflow:-20,aq:-3,nbv:45,riskStart:3.5,riskEnd:3.3},
+    {name:"Restaurants",lob:"sbl",start:120,outflow:-30,aq:-8,nbv:15,riskStart:5.0,riskEnd:5.3},
+    {name:"Multifamily A",lob:"mfl",start:620,outflow:-40,aq:3,nbv:80,riskStart:2.5,riskEnd:2.4},
+    {name:"Multifamily B",lob:"mfl",start:380,outflow:-35,aq:-5,nbv:50,riskStart:3.2,riskEnd:3.3},
+  ],
+  migration:[[680,45,10,2,0],[20,320,38,5,1],[5,15,180,25,8],[0,2,10,95,18],[0,0,1,5,48]],
+  ratingLabels:["Pass","Watch","Substandard","Doubtful","Loss"],
+  quarters:["Q2'24","Q3'24","Q4'24","Q1'25","Q2'25","Q3'25","Q4'25","Q1'26"],
+  timeseries: {
+    "Healthcare":{balance:[720,740,760,790,800,810,820,853],concentration:[14.2,14.1,14.3,14.5,14.4,14.6,14.5,14.7],aq:[3.0,3.0,3.1,3.1,3.2,3.2,3.2,3.4]},
+    "Technology":{balance:[480,510,540,570,590,620,650,728],concentration:[9.5,9.7,10.1,10.5,10.6,11.2,11.5,12.6],aq:[2.9,2.9,2.8,2.8,2.7,2.8,2.8,2.6]},
+    "Manufacturing":{balance:[560,555,550,548,545,542,540,503],concentration:[11.1,10.6,10.3,10.1,9.8,9.8,9.6,8.7],aq:[3.8,3.9,3.9,4.0,4.0,4.1,4.1,4.4]},
+    "Office":{balance:[880,860,840,820,810,795,780,670],concentration:[17.4,16.4,15.7,15.1,14.6,14.3,13.8,11.6],aq:[4.5,4.6,4.8,4.9,5.0,5.1,5.2,5.6]},
+    "Industrial":{balance:[400,420,440,460,480,500,520,590],concentration:[7.9,8.0,8.2,8.5,8.6,9.0,9.2,10.2],aq:[3.2,3.1,3.1,3.0,3.0,3.0,3.0,2.9]},
+    "Multifamily A":{balance:[500,520,540,560,580,600,620,663],concentration:[9.9,9.9,10.1,10.3,10.4,10.8,11.0,11.5],aq:[2.6,2.6,2.5,2.5,2.5,2.5,2.5,2.4]},
+  }
+};
+DATA.industries.forEach(d=>{d.netDelta=d.outflow+d.aq+d.nbv;d.end=d.start+d.netDelta;});
+
+let state={lob:"all",view:"industry",waterfallMode:"dollar",tsMetric:"balance",drillSort:{col:'bal',dir:'desc'}};
+function getFiltered(){return state.lob==="all"?DATA.industries:DATA.industries.filter(d=>d.lob===state.lob);}
+function getTotal(arr){const t={name:"Total",start:0,outflow:0,aq:0,nbv:0,netDelta:0,end:0};arr.forEach(d=>{t.start+=d.start;t.outflow+=d.outflow;t.aq+=d.aq;t.nbv+=d.nbv;t.netDelta+=d.netDelta;t.end+=d.end;});return t;}
+
+const ttEl=document.getElementById('tooltip');
+function showTooltip(evt,html){ttEl.innerHTML=html;ttEl.classList.add('visible');ttEl.style.left=Math.min(evt.clientX+12,window.innerWidth-280)+'px';ttEl.style.top=Math.min(evt.clientY-10,window.innerHeight-100)+'px';}
+function hideTooltip(){ttEl.classList.remove('visible');}
+const fmtM=d=>'$'+Math.abs(d).toLocaleString()+'M';
+const fmtPct=d=>(d>=0?'+':'')+d.toFixed(1)+'%';
+const fmtPctPlain=d=>d.toFixed(1)+'%';
+
+function renderKPIs(){
+  const data=getFiltered(),total=getTotal(data),pctChange=((total.end-total.start)/total.start*100);
+  const kpis=[
+    {label:"Start Balance",value:fmtM(total.start),sub:'100.0%',color:"var(--waterfall-start)"},
+    {label:"Outflows",value:fmtM(total.outflow),sub:fmtPct(total.outflow/total.start*100),color:"var(--waterfall-outflow)"},
+    {label:"AQ Migration",value:fmtM(total.aq),sub:fmtPct(total.aq/total.start*100),color:"var(--waterfall-aq)"},
+    {label:"New Business",value:fmtM(total.nbv),sub:fmtPct(total.nbv/total.start*100),color:"var(--waterfall-nbv)"},
+    {label:"Net Change",value:fmtM(total.netDelta),sub:fmtPct(pctChange),color:total.netDelta>=0?"var(--accent-green)":"var(--accent-red)"},
+    {label:"End Balance",value:fmtM(total.end),sub:'100.0%',color:"var(--waterfall-end)"},
+  ];
+  document.getElementById('kpi-row').innerHTML=kpis.map((k,i)=>`<div class="kpi-card animate-in delay-${i+1}"><div class="kpi-bar" style="background:${k.color}"></div><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.value}</div><div class="kpi-sub" style="color:${k.color}">${k.sub}</div></div>`).join('');
+}
+
+function renderWaterfall(){
+  const container=document.getElementById('waterfall-chart');container.innerHTML='';
+  const data=getFiltered(),total=getTotal(data),usePct=state.waterfallMode==='pct';
+  const steps=[{label:"Start",value:total.start,type:"anchor"},{label:"Outflows",value:total.outflow,type:"delta"},{label:"AQ Migration",value:total.aq,type:"delta"},{label:"New Business",value:total.nbv,type:"delta"},{label:"End",value:total.end,type:"anchor"}];
+  if(usePct){steps[0].display=100;steps[1].display=total.outflow/total.start*100;steps[2].display=total.aq/total.start*100;steps[3].display=total.nbv/total.start*100;steps[4].display=total.end/total.start*100;}else{steps.forEach(s=>s.display=s.value);}
+  const width=container.clientWidth||900,height=300,margin={top:20,right:30,bottom:50,left:60},innerW=width-margin.left-margin.right,innerH=height-margin.top-margin.bottom;
+  const svg=d3.select(container).append('svg').attr('class','waterfall-svg').attr('viewBox',`0 0 ${width} ${height}`).attr('width','100%');
+  const g=svg.append('g').attr('transform',`translate(${margin.left},${margin.top})`);
+  const x=d3.scaleBand().domain(steps.map(s=>s.label)).range([0,innerW]).padding(0.35);const barW=x.bandwidth();
+  let running=usePct?100:total.start;
+  const bars=steps.map((s,i)=>{if(s.type==='anchor')return{...s,y0:0,y1:Math.abs(usePct?(i===0?100:s.display):s.value)};const base=running;running+=s.display;return s.display>=0?{...s,y0:base,y1:base+s.display}:{...s,y0:base+s.display,y1:base};});
+  const maxVal=d3.max(bars,b=>b.y1)*1.1;const y=d3.scaleLinear().domain([0,maxVal]).range([innerH,0]);
+  g.selectAll('.grid-line').data(y.ticks(5)).join('line').attr('x1',0).attr('x2',innerW).attr('y1',d=>y(d)).attr('y2',d=>y(d)).attr('stroke','var(--border)').attr('stroke-dasharray','3,3').attr('opacity',0.5);
+  g.selectAll('.y-label').data(y.ticks(5)).join('text').attr('x',-10).attr('y',d=>y(d)).attr('text-anchor','end').attr('dominant-baseline','middle').attr('font-size',10).attr('fill','var(--text-muted)').text(d=>usePct?d.toFixed(0)+'%':'$'+d.toLocaleString()+'M');
+  const colors={"Start":"var(--waterfall-start)","Outflows":"var(--waterfall-outflow)","AQ Migration":"var(--waterfall-aq)","New Business":"var(--waterfall-nbv)","End":"var(--waterfall-end)"};
+  const barGroups=g.selectAll('.bar-group').data(bars).join('g').attr('transform',d=>`translate(${x(d.label)},0)`);
+  barGroups.append('rect').attr('y',d=>y(d.y1)).attr('height',0).attr('width',barW).attr('rx',4).attr('fill',d=>colors[d.label]).attr('opacity',0.85).on('mousemove',(evt,d)=>showTooltip(evt,`<div class="tt-label">${d.label}</div><div class="tt-value">${usePct?fmtPctPlain(d.display):fmtM(d.value)}</div>`)).on('mouseleave',hideTooltip).transition().duration(700).delay((d,i)=>i*120).attr('height',d=>Math.max(2,Math.abs(y(d.y0)-y(d.y1))));
+  barGroups.append('text').attr('x',barW/2).attr('y',d=>y(d.y1)-8).attr('text-anchor','middle').attr('font-size',11).attr('font-weight',600).attr('fill',d=>d.type==='delta'?(d.display>=0?'var(--accent-green)':'var(--accent-red)'):'var(--text-primary)').attr('opacity',0).text(d=>usePct?(d.type==='anchor'?fmtPctPlain(d.display):fmtPct(d.display)):(d.type==='delta'?(d.value>=0?'+':'')+fmtM(d.value):fmtM(d.value))).transition().duration(500).delay((d,i)=>i*120+400).attr('opacity',1);
+  g.selectAll('.x-label').data(steps).join('text').attr('x',d=>x(d.label)+barW/2).attr('y',innerH+28).attr('text-anchor','middle').attr('font-size',11).attr('font-weight',500).attr('fill','var(--text-secondary)').text(d=>d.label);
+}
+
+function renderDetailTable(){
+  const data=getFiltered(),total=getTotal(data);
+  document.getElementById('detail-title').textContent=state.view==='severity'?'Severity Detail':'Industry Detail';
+  let html=`<table class="flow-table"><thead><tr><th>${state.view==='severity'?'Rating':'Industry'}</th><th>Start ($M)</th><th>Outflow</th><th>AQ</th><th>NBV</th><th>Net \u0394</th><th>End ($M)</th><th>\u0394%</th></tr></thead><tbody>`;
+  data.sort((a,b)=>b.start-a.start).forEach(d=>{
+    const pct=d.netDelta/d.start*100,pctClass=pct>=0?'pos':'neg';
+    html+=`<tr class="clickable-row" data-industry="${d.name}"><td>${d.name}</td><td>${d.start.toLocaleString()}</td><td class="neg">${d.outflow.toLocaleString()}</td><td class="${d.aq>=0?'pos':'neg'}">${d.aq>=0?'+':''}${d.aq.toLocaleString()}</td><td class="pos">+${d.nbv.toLocaleString()}</td><td class="${pctClass}">${d.netDelta>=0?'+':''}${d.netDelta.toLocaleString()}</td><td>${d.end.toLocaleString()}</td><td><span class="pct-badge ${pctClass}">${fmtPct(pct)}</span></td></tr>`;
+  });
+  const tp=total.netDelta/total.start*100,tc=tp>=0?'pos':'neg';
+  html+=`<tr class="total-row"><td>Total</td><td>${total.start.toLocaleString()}</td><td class="neg">${total.outflow.toLocaleString()}</td><td class="${total.aq>=0?'pos':'neg'}">${total.aq>=0?'+':''}${total.aq.toLocaleString()}</td><td class="pos">+${total.nbv.toLocaleString()}</td><td class="${tc}">${total.netDelta>=0?'+':''}${total.netDelta.toLocaleString()}</td><td>${total.end.toLocaleString()}</td><td><span class="pct-badge ${tc}">${fmtPct(tp)}</span></td></tr></tbody></table>`;
+  document.getElementById('detail-table').innerHTML=html;
+  document.querySelectorAll('.clickable-row').forEach(row=>{row.addEventListener('click',()=>openDrilldown(row.dataset.industry));});
+}
+
+// =====================================================
+// DRILL-DOWN
+// =====================================================
+function openDrilldown(industryName){
+  const industry=DATA.industries.find(d=>d.name===industryName);if(!industry)return;
+  const obligors=OBLIGOR_DATA[industryName]||[];
+  document.getElementById('dd-title').textContent=industryName;
+  document.getElementById('dd-subtitle').textContent=`${industry.lob.toUpperCase()} \u00B7 ${obligors.length} obligors \u00B7 Q4 2025 \u2192 Q1 2026`;
+  const riskBadge=r=>{const cls=r==='Pass'?'risk-pass':r==='Watch'?'risk-watch':r==='Substandard'?'risk-sub':'risk-doubtful';return `<span class="risk-badge ${cls}">${r}</span>`;};
+  const flowTag=f=>{if(f==='outflow')return '<span class="flow-tag outflow">Payoff</span>';if(f==='nbv')return '<span class="flow-tag nbv">New</span>';if(f==='aq-up')return '<span class="flow-tag aq-up">Downgrade</span>';if(f==='aq-down')return '<span class="flow-tag aq-down">Upgrade</span>';return '';};
+  const outflowNames=obligors.filter(o=>o.flow==='outflow'),nbvNames=obligors.filter(o=>o.flow==='nbv'),aqNames=obligors.filter(o=>o.flow==='aq-up'||o.flow==='aq-down');
+  const industryTotal=obligors.reduce((s,o)=>s+o.bal,0);
+  let html=`<div class="dd-kpi-row">
+    <div class="dd-kpi"><div class="dd-kpi-label">Start</div><div class="dd-kpi-value">${fmtM(industry.start)}</div></div>
+    <div class="dd-kpi"><div class="dd-kpi-label">Net Change</div><div class="dd-kpi-value" style="color:${industry.netDelta>=0?'var(--accent-green)':'var(--accent-red)'}">${(industry.netDelta>=0?'+':'')}${fmtM(industry.netDelta)}</div></div>
+    <div class="dd-kpi"><div class="dd-kpi-label">End</div><div class="dd-kpi-value">${fmtM(industry.end)}</div></div>
+    <div class="dd-kpi"><div class="dd-kpi-label">Avg Risk</div><div class="dd-kpi-value">${industry.riskStart.toFixed(1)} \u2192 ${industry.riskEnd.toFixed(1)}</div></div>
+  </div>`;
+  html+=`<div id="dd-waterfall" style="margin-bottom:24px"></div>`;
+  html+=`<div class="dd-section"><div class="dd-section-title">Flow Decomposition</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      <div style="background:var(--accent-red-dim);border-radius:8px;padding:12px;border:1px solid rgba(204,0,0,0.1)"><div style="font-size:10px;font-weight:600;color:var(--accent-red);text-transform:uppercase;letter-spacing:0.8px">Outflows</div><div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;margin-top:4px;color:var(--accent-red)">${fmtM(industry.outflow)}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">${outflowNames.length} names</div></div>
+      <div style="background:rgba(184,134,11,0.06);border-radius:8px;padding:12px;border:1px solid rgba(184,134,11,0.12)"><div style="font-size:10px;font-weight:600;color:var(--accent-amber);text-transform:uppercase;letter-spacing:0.8px">AQ Migration</div><div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;margin-top:4px;color:var(--accent-amber)">${(industry.aq>=0?'+':'')}${fmtM(industry.aq)}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">${aqNames.length} names</div></div>
+      <div style="background:var(--accent-green-dim);border-radius:8px;padding:12px;border:1px solid rgba(46,125,50,0.12)"><div style="font-size:10px;font-weight:600;color:var(--accent-green);text-transform:uppercase;letter-spacing:0.8px">New Business</div><div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;margin-top:4px;color:var(--accent-green)">+${fmtM(industry.nbv)}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">${nbvNames.length} names</div></div>
+    </div></div>`;
+  html+=`<div class="dd-section"><div class="dd-section-title">Obligor Detail</div>
+    <table class="obligor-table" id="obligor-table"><thead><tr>
+      <th data-sort="name">Obligor Name \u21C5</th><th data-sort="bal">Balance ($M) \u21C5</th><th data-sort="risk">Risk Rating \u21C5</th><th data-sort="flow">Flow Type \u21C5</th><th data-sort="pct">% of Industry \u21C5</th>
+    </tr></thead><tbody>`;
+  [...obligors].sort((a,b)=>b.bal-a.bal).forEach(o=>{
+    html+=`<tr><td>${o.name}${flowTag(o.flow)}</td><td>${o.bal.toLocaleString()}</td><td>${riskBadge(o.risk)}</td><td style="font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text-secondary)">${o.flow==='static'?'Continuing':o.flow==='outflow'?'Payoff/Paydown':o.flow==='nbv'?'New Origination':o.flow==='aq-up'?'Downgrade':'Upgrade'}</td><td>${(o.bal/industryTotal*100).toFixed(1)}%</td></tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  document.getElementById('dd-body').innerHTML=html;
+
+  // Mini waterfall
+  const wc=document.getElementById('dd-waterfall');if(wc){
+    const steps=[{label:"Start",value:industry.start,type:"anchor"},{label:"Outflows",value:industry.outflow,type:"delta"},{label:"AQ",value:industry.aq,type:"delta"},{label:"NBV",value:industry.nbv,type:"delta"},{label:"End",value:industry.end,type:"anchor"}];
+    const width=660,height=150,margin={top:12,right:20,bottom:32,left:50},innerW=width-margin.left-margin.right,innerH=height-margin.top-margin.bottom;
+    const svg=d3.select(wc).append('svg').attr('class','waterfall-svg').attr('viewBox',`0 0 ${width} ${height}`).attr('width','100%');
+    const g=svg.append('g').attr('transform',`translate(${margin.left},${margin.top})`);
+    const x=d3.scaleBand().domain(steps.map(s=>s.label)).range([0,innerW]).padding(0.3);const barW=x.bandwidth();
+    let running=industry.start;
+    const bars=steps.map((s,i)=>{if(s.type==='anchor')return{...s,y0:0,y1:s.value};const base=running;running+=s.value;return s.value>=0?{...s,y0:base,y1:base+s.value}:{...s,y0:base+s.value,y1:base};});
+    const maxVal=d3.max(bars,b=>b.y1)*1.15;const y=d3.scaleLinear().domain([0,maxVal]).range([innerH,0]);
+    const clrs={"Start":"#404040","Outflows":"#CC0000","AQ":"#b8860b","NBV":"#2e7d32","End":"#1a1a1a"};
+    g.selectAll('.bar').data(bars).join('rect').attr('x',d=>x(d.label)).attr('y',d=>y(d.y1)).attr('width',barW).attr('height',d=>Math.max(1,y(d.y0)-y(d.y1))).attr('rx',3).attr('fill',d=>clrs[d.label]).attr('opacity',0.85);
+    g.selectAll('.val').data(bars).join('text').attr('x',d=>x(d.label)+barW/2).attr('y',d=>y(d.y1)-5).attr('text-anchor','middle').attr('font-size',10).attr('font-weight',600).attr('fill',d=>d.type==='delta'?(d.value>=0?'#2e7d32':'#CC0000'):'#1a1a1a').text(d=>d.type==='delta'?(d.value>=0?'+':'')+d.value:d.value);
+    g.selectAll('.xl').data(steps).join('text').attr('x',d=>x(d.label)+barW/2).attr('y',innerH+18).attr('text-anchor','middle').attr('font-size',10).attr('fill','#767676').text(d=>d.label);
+  }
+
+  // Sort handlers
+  document.querySelectorAll('#obligor-table thead th').forEach(th=>{
+    th.addEventListener('click',()=>{
+      const col=th.dataset.sort;
+      if(state.drillSort.col===col)state.drillSort.dir=state.drillSort.dir==='desc'?'asc':'desc';
+      else{state.drillSort.col=col;state.drillSort.dir='desc';}
+      const riskOrder={Pass:1,Watch:2,Substandard:3,Doubtful:4,Loss:5};
+      const sorted=[...obligors].sort((a,b)=>{let va,vb;if(col==='name'){va=a.name;vb=b.name;}else if(col==='bal'||col==='pct'){va=a.bal;vb=b.bal;}else if(col==='risk'){va=riskOrder[a.risk]||0;vb=riskOrder[b.risk]||0;}else{va=a.flow;vb=b.flow;}if(typeof va==='string')return state.drillSort.dir==='asc'?va.localeCompare(vb):vb.localeCompare(va);return state.drillSort.dir==='asc'?va-vb:vb-va;});
+      document.querySelector('#obligor-table tbody').innerHTML=sorted.map(o=>`<tr><td>${o.name}${flowTag(o.flow)}</td><td>${o.bal.toLocaleString()}</td><td>${riskBadge(o.risk)}</td><td style="font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text-secondary)">${o.flow==='static'?'Continuing':o.flow==='outflow'?'Payoff/Paydown':o.flow==='nbv'?'New Origination':o.flow==='aq-up'?'Downgrade':'Upgrade'}</td><td>${(o.bal/industryTotal*100).toFixed(1)}%</td></tr>`).join('');
+    });
+  });
+
+  requestAnimationFrame(()=>{document.getElementById('dd-panel').classList.add('open');document.getElementById('dd-overlay').classList.add('open');});
+}
+function closeDrilldown(){document.getElementById('dd-panel').classList.remove('open');document.getElementById('dd-overlay').classList.remove('open');}
+document.getElementById('dd-close').addEventListener('click',closeDrilldown);
+document.getElementById('dd-overlay').addEventListener('click',closeDrilldown);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrilldown();});
+
+function renderHeatmap(){
+  const container=document.getElementById('severity-heatmap');container.innerHTML='';
+  const labels=DATA.ratingLabels,matrix=DATA.migration,n=labels.length;
+  const size=Math.min(80,(container.clientWidth-80)/(n+1)),gap=3;
+  const maxVal=d3.max(matrix.flat());
+  const colorScale=d3.scaleSequential().domain([0,maxVal]).interpolator(t=>d3.interpolateRgb('#f5f5f5','#CC0000')(Math.pow(t,0.6)));
+  let html='<div style="display:inline-block">';
+  html+=`<div style="display:flex;align-items:center;gap:${gap}px;margin-bottom:${gap}px"><div style="width:${size}px;height:${size*0.5}px"></div><div style="width:${size*n+gap*(n-1)}px;text-align:center;margin-bottom:4px"><span class="heatmap-label">To Rating</span></div></div>`;
+  html+=`<div style="display:flex;align-items:center;gap:${gap}px;margin-bottom:${gap}px"><div style="width:${size}px"></div>`;
+  labels.forEach(l=>{html+=`<div style="width:${size}px;text-align:center;font-size:10px;color:var(--text-muted);font-weight:600">${l}</div>`;});html+='</div>';
+  matrix.forEach((row,i)=>{html+=`<div style="display:flex;align-items:center;gap:${gap}px;margin-bottom:${gap}px"><div style="width:${size}px;text-align:right;padding-right:8px;font-size:10px;color:var(--text-muted);font-weight:600">${labels[i]}</div>`;row.forEach((val,j)=>{const bg=colorScale(val);const textColor=val>maxVal*0.4?'#ffffff':'#555555';const border=i===j?'2px solid rgba(0,0,0,0.15)':'1px solid rgba(0,0,0,0.06)';html+=`<div class="heatmap-cell" style="width:${size}px;height:${size}px;background:${bg};color:${textColor};border:${border}" onmousemove="showTooltip(event,'<div class=\\'tt-label\\'>${labels[i]} \u2192 ${labels[j]}</div><div class=\\'tt-value\\'>${fmtM(val)}</div><div class=\\'tt-sub\\'>${(val/d3.sum(row)*100).toFixed(1)}% of row</div>')" onmouseleave="hideTooltip()">${val>0?val:''}</div>`;});html+='</div>';});
+  html+='</div><div style="margin-top:10px"><span style="font-size:10px;color:var(--text-muted)">From Rating \u2192</span></div>';
+  container.innerHTML=html;
+}
+
+function renderTimeSeries(){
+  const container=document.getElementById('timeseries-chart');container.innerHTML='';
+  const legendEl=document.getElementById('ts-legend');legendEl.innerHTML='';
+  const metric=state.tsMetric,quarters=DATA.quarters,series=DATA.timeseries,names=Object.keys(series);
+  const width=container.clientWidth||900,height=260,margin={top:16,right:20,bottom:36,left:56},innerW=width-margin.left-margin.right,innerH=height-margin.top-margin.bottom;
+  const svg=d3.select(container).append('svg').attr('class','ts-svg').attr('viewBox',`0 0 ${width} ${height}`).attr('width','100%');
+  const g=svg.append('g').attr('transform',`translate(${margin.left},${margin.top})`);
+  const x=d3.scalePoint().domain(quarters).range([0,innerW]).padding(0.5);
+  const allVals=names.flatMap(n=>series[n][metric]);
+  const y=d3.scaleLinear().domain([d3.min(allVals)*0.92,d3.max(allVals)*1.08]).range([innerH,0]);
+  const colors=d3.scaleOrdinal().domain(names).range(['#CC0000','#2e7d32','#b8860b','#404040','#5c3d6e','#2d6a6a']);
+  g.selectAll('.grid').data(y.ticks(5)).join('line').attr('x1',0).attr('x2',innerW).attr('y1',d=>y(d)).attr('y2',d=>y(d)).attr('stroke','var(--border)').attr('stroke-dasharray','2,4').attr('opacity',0.4);
+  g.selectAll('.y-label').data(y.ticks(5)).join('text').attr('x',-10).attr('y',d=>y(d)).attr('text-anchor','end').attr('dominant-baseline','middle').attr('font-size',10).attr('fill','var(--text-muted)').text(d=>metric==='concentration'?d.toFixed(1)+'%':metric==='aq'?d.toFixed(1):'$'+d+'M');
+  g.selectAll('.x-label').data(quarters).join('text').attr('x',d=>x(d)).attr('y',innerH+24).attr('text-anchor','middle').attr('font-size',10).attr('fill','var(--text-muted)').text(d=>d);
+  const line=d3.line().x((d,i)=>x(quarters[i])).y(d=>y(d)).curve(d3.curveMonotoneX);
+  const area=d3.area().x((d,i)=>x(quarters[i])).y0(innerH).y1(d=>y(d)).curve(d3.curveMonotoneX);
+  names.forEach((name,idx)=>{const vals=series[name][metric];const c=colors(name);
+    g.append('path').datum(vals).attr('class','ts-area').attr('d',area).attr('fill',c);
+    const path=g.append('path').datum(vals).attr('class','ts-line').attr('d',line).attr('stroke',c);
+    const totalLen=path.node().getTotalLength();path.attr('stroke-dasharray',totalLen).attr('stroke-dashoffset',totalLen).transition().duration(1000).delay(idx*150).attr('stroke-dashoffset',0);
+    g.selectAll(`.dot-${idx}`).data(vals).join('circle').attr('cx',(d,i)=>x(quarters[i])).attr('cy',d=>y(d)).attr('r',3.5).attr('fill','var(--bg-card)').attr('stroke',c).attr('opacity',0).on('mousemove',(evt,d)=>{const i=vals.indexOf(d);const valStr=metric==='concentration'?d.toFixed(1)+'%':metric==='aq'?d.toFixed(1):fmtM(d);showTooltip(evt,`<div class="tt-label">${name} \u2014 ${quarters[i]}</div><div class="tt-value">${valStr}</div>`);}).on('mouseleave',hideTooltip).transition().duration(400).delay(idx*150+800).attr('opacity',1);
+  });
+  legendEl.innerHTML=names.map(name=>`<div class="legend-item"><div class="legend-dot" style="background:${colors(name)}"></div>${name}</div>`).join('');
+}
+
+document.querySelectorAll('.filter-btn[data-filter="lob"]').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.filter-btn[data-filter="lob"]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');state.lob=btn.dataset.value;renderAll();});});
+document.querySelectorAll('.filter-btn[data-filter="view"]').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.filter-btn[data-filter="view"]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');state.view=btn.dataset.value;renderDetailTable();});});
+document.querySelectorAll('#waterfall-card .toggle-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('#waterfall-card .toggle-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');state.waterfallMode=btn.dataset.mode;renderWaterfall();});});
+document.querySelectorAll('#ts-toggle .toggle-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('#ts-toggle .toggle-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');state.tsMetric=btn.dataset.ts;renderTimeSeries();});});
+
+function renderAll(){renderKPIs();renderWaterfall();renderDetailTable();renderHeatmap();renderTimeSeries();}
+let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderAll,200);});
+renderAll();
+</script>
+</body>
+</html>
