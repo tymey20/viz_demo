@@ -64,12 +64,12 @@
   <span class="brand-name">Apex Analytics</span>
   <div class="brand-divider"></div>
   <span class="brand-dept">Credit Risk Analytics &mdash; Portfolio Composition</span>
-  <a href="index.html" class="nav-link">&larr; All Dashboards</a>
+  <a href="/" class="nav-link">&larr; All Dashboards</a>
 </div>
 <div class="dashboard">
   <div class="header animate-in">
     <div class="header-left"><h1>Portfolio Composition</h1><div class="subtitle">Hierarchical exposure breakdown &mdash; LOB &rarr; Industry &rarr; Obligor</div></div>
-    <div class="period-label">Q1 2026</div>
+    <div class="period-label" id="period-label"></div>
   </div>
   <div class="kpi-row animate-in delay-1" id="kpi-row"></div>
   <div class="chart-card animate-in delay-2">
@@ -88,90 +88,13 @@
 <div class="tooltip" id="tooltip"></div>
 
 <script>
+// Data is loaded from /api/treemap at bootstrap (see end of file).
+// The render code below is unchanged from the original; only the source of the
+// dataset globals has changed.
+let PORTFOLIO;
 const RISK_COLORS = { Pass:"#2e7d32", Watch:"#b8860b", Substandard:"#CC0000", Doubtful:"#990000" };
 const LOB_RISK = { "C&I":"Pass", "CRE":"Watch", "SBL":"Pass", "Multifamily":"Pass" };
 
-const PORTFOLIO = {
-  name:"Portfolio", children:[
-    { name:"C&I", risk:"Pass", children:[
-      { name:"Healthcare", risk:"Pass", children:[
-        {name:"Mercy Health Partners",value:145,risk:"Pass"},{name:"Pinnacle Medical Group",value:112,risk:"Pass"},
-        {name:"CareFirst Regional Hospital",value:98,risk:"Watch"},{name:"NovaCare Rehabilitation",value:88,risk:"Pass"},
-        {name:"Tri-County Health Systems",value:82,risk:"Pass"},{name:"Summit Behavioral Health",value:75,risk:"Pass"},
-        {name:"Heartland Senior Living",value:65,risk:"Watch"},{name:"Pacific Dental Partners",value:52,risk:"Pass"},
-        {name:"Apex Urgent Care Holdings",value:42,risk:"Substandard"},{name:"Lakeview Specialty Clinic",value:38,risk:"Pass"},
-      ]},
-      { name:"Technology", risk:"Pass", children:[
-        {name:"Nexus Cloud Solutions",value:120,risk:"Pass"},{name:"Veristream Data Corp",value:105,risk:"Pass"},
-        {name:"Quantum Edge AI",value:95,risk:"Pass"},{name:"CyberVault Security",value:88,risk:"Pass"},
-        {name:"DataPulse Analytics",value:78,risk:"Pass"},{name:"TechBridge Platforms",value:65,risk:"Pass"},
-        {name:"CloudForge Inc",value:55,risk:"Pass"},{name:"Sentinel IoT Systems",value:48,risk:"Pass"},
-      ]},
-      { name:"Manufacturing", risk:"Watch", children:[
-        {name:"Ironworks Precision Mfg",value:95,risk:"Watch"},{name:"Cascade Metals Group",value:88,risk:"Pass"},
-        {name:"Heartland Plastics Inc",value:72,risk:"Substandard"},{name:"Summit Tooling Corp",value:65,risk:"Pass"},
-        {name:"Great Lakes Fabrication",value:55,risk:"Watch"},{name:"Atlas Components LLC",value:48,risk:"Pass"},
-        {name:"Pioneer Industrial",value:42,risk:"Pass"},{name:"Midwest Stamping Co",value:38,risk:"Pass"},
-      ]},
-      { name:"Retail Trade", risk:"Watch", children:[
-        {name:"Grandview Retail Partners",value:78,risk:"Watch"},{name:"Sterling Home Furnishings",value:65,risk:"Substandard"},
-        {name:"BrightMart Holdings",value:52,risk:"Pass"},{name:"Northern Outlet Group",value:48,risk:"Watch"},
-        {name:"Riverdale Auto Parts",value:42,risk:"Pass"},{name:"Peak Sporting Goods",value:35,risk:"Pass"},
-        {name:"Harbor General Store",value:30,risk:"Pass"},{name:"Main Street Brands",value:28,risk:"Pass"},
-      ]},
-    ]},
-    { name:"CRE", risk:"Watch", children:[
-      { name:"Office", risk:"Substandard", children:[
-        {name:"Metro Tower Partners",value:155,risk:"Substandard"},{name:"Civic Center Properties",value:128,risk:"Watch"},
-        {name:"Lakefront Office REIT",value:110,risk:"Watch"},{name:"Cornerstone Business Park",value:95,risk:"Pass"},
-        {name:"Gateway Tower Holdings",value:82,risk:"Substandard"},{name:"Meridian Plaza LLC",value:68,risk:"Pass"},
-        {name:"Harbor View Office",value:55,risk:"Pass"},{name:"Summit Ridge Campus",value:45,risk:"Pass"},
-      ]},
-      { name:"Industrial", risk:"Pass", children:[
-        {name:"Great Lakes Logistics Park",value:110,risk:"Pass"},{name:"Midwest Distribution Hub",value:95,risk:"Pass"},
-        {name:"Central Corridor Warehousing",value:82,risk:"Pass"},{name:"Buckeye Flex Space",value:68,risk:"Pass"},
-        {name:"Pinnacle Cold Storage",value:62,risk:"Pass"},{name:"Northern Industrial REIT",value:55,risk:"Pass"},
-        {name:"CrossDock Partners",value:48,risk:"Pass"},
-      ]},
-      { name:"Retail CRE", risk:"Watch", children:[
-        {name:"Towne Centre Mall LP",value:72,risk:"Substandard"},{name:"Heritage Shopping Plaza",value:58,risk:"Watch"},
-        {name:"Crossroads Retail REIT",value:52,risk:"Pass"},{name:"Maple Grove Strip Center",value:45,risk:"Pass"},
-        {name:"Lakeshore Marketplace",value:38,risk:"Pass"},{name:"Eastgate Commons",value:35,risk:"Watch"},
-      ]},
-      { name:"Hospitality", risk:"Pass", children:[
-        {name:"Lakeshore Resort Group",value:65,risk:"Pass"},{name:"Heritage Inn Collection",value:55,risk:"Watch"},
-        {name:"Metro Select Hotels",value:48,risk:"Pass"},{name:"Cascade Lodge Partners",value:42,risk:"Pass"},
-        {name:"Riverfront Hospitality",value:38,risk:"Pass"},{name:"Bayview Conference Center",value:25,risk:"Pass"},
-      ]},
-    ]},
-    { name:"SBL", risk:"Pass", children:[
-      { name:"Prof Services", risk:"Pass", children:[
-        {name:"Meridian Law Partners",value:48,risk:"Pass"},{name:"Cornerstone CPA Group",value:42,risk:"Pass"},
-        {name:"Summit Advisory LLC",value:35,risk:"Pass"},{name:"Lakeview Engineering",value:28,risk:"Pass"},
-        {name:"Brightpath Consulting",value:22,risk:"Pass"},{name:"Apex Marketing Group",value:15,risk:"Watch"},
-      ]},
-      { name:"Restaurants", risk:"Watch", children:[
-        {name:"Great Lakes Restaurant Grp",value:32,risk:"Substandard"},{name:"Metro Dining Holdings",value:25,risk:"Watch"},
-        {name:"Fireside Grill Concepts",value:20,risk:"Pass"},{name:"Harbor Fresh Inc",value:18,risk:"Pass"},
-        {name:"Cornerstone Catering",value:15,risk:"Watch"},{name:"Sunrise Bakery Chain",value:10,risk:"Pass"},
-      ]},
-    ]},
-    { name:"Multifamily", risk:"Pass", children:[
-      { name:"Multifamily A", risk:"Pass", children:[
-        {name:"Parkview Apartments REIT",value:135,risk:"Pass"},{name:"Metro Living Partners",value:115,risk:"Pass"},
-        {name:"Lakewood Residential",value:98,risk:"Pass"},{name:"Summit View Apartments",value:85,risk:"Pass"},
-        {name:"Heritage Garden Homes",value:72,risk:"Pass"},{name:"Crossroads Multi-Family",value:62,risk:"Pass"},
-        {name:"Riverside Community LP",value:48,risk:"Pass"},{name:"Northgate Residential",value:35,risk:"Pass"},
-      ]},
-      { name:"Multifamily B", risk:"Pass", children:[
-        {name:"Eastside Housing Group",value:85,risk:"Pass"},{name:"Willowbrook Apartments",value:72,risk:"Pass"},
-        {name:"Gateway Residences",value:58,risk:"Watch"},{name:"Central Park Estates",value:52,risk:"Pass"},
-        {name:"Cedar Grove Living",value:45,risk:"Pass"},{name:"Hilltop Apartment Group",value:38,risk:"Pass"},
-        {name:"Oakmont Housing LP",value:30,risk:"Pass"},
-      ]},
-    ]},
-  ]
-};
 
 const ttEl = document.getElementById('tooltip');
 function showTooltip(evt, html) { ttEl.innerHTML=html; ttEl.classList.add('visible'); ttEl.style.left=Math.min(evt.clientX+12,window.innerWidth-300)+'px'; ttEl.style.top=Math.min(evt.clientY-10,window.innerHeight-100)+'px'; }
@@ -190,7 +113,7 @@ function getAvgRisk(node) {
   return maxRisk[0];
 }
 
-const totalPortfolio = sumValues(PORTFOLIO);
+let totalPortfolio = 0;
 
 function renderKPIs() {
   const totalObs = countLeaves(PORTFOLIO);
@@ -212,8 +135,8 @@ function renderKPIs() {
   ).join('');
 }
 
-let currentNode = PORTFOLIO;
-let breadcrumbPath = [PORTFOLIO];
+let currentNode;
+let breadcrumbPath;
 
 function renderBreadcrumb() {
   const el = document.getElementById('breadcrumb');
@@ -288,7 +211,22 @@ function renderTreemap() {
 
 function renderAll() { renderKPIs(); renderBreadcrumb(); renderTreemap(); }
 let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderAll, 200); });
-renderAll();
+async function bootstrap() {
+  try {
+    const payload = await fetch('/api/treemap').then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+    PORTFOLIO = payload.portfolio; totalPortfolio = sumValues(PORTFOLIO); currentNode = PORTFOLIO; breadcrumbPath = [PORTFOLIO];
+    document.getElementById('period-label').textContent = payload.period_label;
+    renderAll();
+  } catch (err) {
+    document.body.insertAdjacentHTML('afterbegin',
+      `<div style="background:#fee;border:1px solid #c00;border-radius:8px;padding:14px;margin:20px;color:#900;font-family:'JetBrains Mono',monospace;font-size:12px">Failed to load data: ${err.message}</div>`);
+    console.error(err);
+  }
+}
+bootstrap();
 </script>
 </body>
 </html>

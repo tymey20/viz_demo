@@ -158,7 +158,7 @@
 <div class="dashboard">
   <div class="header animate-in">
     <div class="header-left"><h1>Portfolio Flow Analysis</h1><div class="subtitle">Commercial Credit &mdash; Period-over-Period Bridge</div></div>
-    <div class="period-label">Q4 2025 &rarr; Q1 2026</div>
+    <div class="period-label" id="period-label"></div>
   </div>
   <div class="filter-bar animate-in delay-1">
     <div class="filter-group">
@@ -219,115 +219,10 @@
 
 <script>
 // Obligor data by industry
-const OBLIGOR_DATA = {
-  "Healthcare": [
-    {name:"Mercy Health Partners",bal:145,risk:"Pass",flow:"static"},{name:"Pinnacle Medical Group",bal:112,risk:"Pass",flow:"static"},
-    {name:"CareFirst Regional Hospital",bal:98,risk:"Watch",flow:"aq-up"},{name:"NovaCare Rehabilitation",bal:88,risk:"Pass",flow:"nbv"},
-    {name:"Tri-County Health Systems",bal:82,risk:"Pass",flow:"static"},{name:"Summit Behavioral Health",bal:75,risk:"Pass",flow:"nbv"},
-    {name:"Heartland Senior Living",bal:65,risk:"Watch",flow:"aq-up"},{name:"Pacific Dental Partners",bal:52,risk:"Pass",flow:"nbv"},
-    {name:"Apex Urgent Care Holdings",bal:42,risk:"Substandard",flow:"aq-up"},{name:"Lakeview Specialty Clinic",bal:38,risk:"Pass",flow:"outflow"},
-    {name:"Genesis Therapeutics Inc",bal:35,risk:"Pass",flow:"outflow"},{name:"Prairie Health Network",bal:22,risk:"Pass",flow:"outflow"},
-  ],
-  "Technology": [
-    {name:"Nexus Cloud Solutions",bal:120,risk:"Pass",flow:"nbv"},{name:"Veristream Data Corp",bal:105,risk:"Pass",flow:"static"},
-    {name:"Quantum Edge AI",bal:95,risk:"Pass",flow:"nbv"},{name:"CyberVault Security",bal:88,risk:"Pass",flow:"static"},
-    {name:"DataPulse Analytics",bal:78,risk:"Pass",flow:"static"},{name:"TechBridge Platforms",bal:65,risk:"Pass",flow:"aq-down"},
-    {name:"CloudForge Inc",bal:55,risk:"Pass",flow:"static"},{name:"Sentinel IoT Systems",bal:48,risk:"Pass",flow:"nbv"},
-    {name:"AeroCode Software",bal:40,risk:"Pass",flow:"outflow"},{name:"Brightpath DevOps",bal:34,risk:"Pass",flow:"static"},
-  ],
-  "Manufacturing": [
-    {name:"Ironworks Precision Mfg",bal:95,risk:"Watch",flow:"aq-up"},{name:"Cascade Metals Group",bal:88,risk:"Pass",flow:"static"},
-    {name:"Heartland Plastics Inc",bal:72,risk:"Substandard",flow:"aq-up"},{name:"Summit Tooling Corp",bal:65,risk:"Pass",flow:"static"},
-    {name:"Great Lakes Fabrication",bal:55,risk:"Watch",flow:"aq-up"},{name:"Atlas Components LLC",bal:48,risk:"Pass",flow:"nbv"},
-    {name:"Pioneer Industrial",bal:42,risk:"Pass",flow:"outflow"},{name:"Midwest Stamping Co",bal:38,risk:"Pass",flow:"outflow"},
-    {name:"Precision CNC Holdings",bal:20,risk:"Pass",flow:"outflow"},{name:"Ridgeline Assembly",bal:17,risk:"Pass",flow:"nbv"},
-  ],
-  "Retail Trade": [
-    {name:"Grandview Retail Partners",bal:78,risk:"Watch",flow:"aq-up"},{name:"Sterling Home Furnishings",bal:65,risk:"Substandard",flow:"aq-up"},
-    {name:"BrightMart Holdings",bal:52,risk:"Pass",flow:"outflow"},{name:"Northern Outlet Group",bal:48,risk:"Watch",flow:"static"},
-    {name:"Riverdale Auto Parts",bal:42,risk:"Pass",flow:"static"},{name:"Peak Sporting Goods",bal:35,risk:"Pass",flow:"outflow"},
-    {name:"Harbor General Store",bal:30,risk:"Pass",flow:"nbv"},{name:"Main Street Brands",bal:28,risk:"Pass",flow:"outflow"},
-    {name:"Cornerstone Apparel",bal:22,risk:"Pass",flow:"static"},{name:"Elm Street Grocers",bal:10,risk:"Pass",flow:"static"},
-  ],
-  "Office": [
-    {name:"Metro Tower Partners",bal:155,risk:"Substandard",flow:"aq-up"},{name:"Civic Center Properties",bal:128,risk:"Watch",flow:"aq-up"},
-    {name:"Lakefront Office REIT",bal:110,risk:"Watch",flow:"static"},{name:"Cornerstone Business Park",bal:95,risk:"Pass",flow:"outflow"},
-    {name:"Gateway Tower Holdings",bal:82,risk:"Substandard",flow:"aq-up"},{name:"Meridian Plaza LLC",bal:68,risk:"Pass",flow:"static"},
-    {name:"Harbor View Office",bal:55,risk:"Pass",flow:"outflow"},{name:"Summit Ridge Campus",bal:45,risk:"Pass",flow:"nbv"},
-    {name:"Crossroads Commercial",bal:22,risk:"Pass",flow:"outflow"},{name:"Innovation Hub Realty",bal:20,risk:"Pass",flow:"static"},
-  ],
-  "Industrial": [
-    {name:"Great Lakes Logistics Park",bal:110,risk:"Pass",flow:"nbv"},{name:"Midwest Distribution Hub",bal:95,risk:"Pass",flow:"static"},
-    {name:"Central Corridor Warehousing",bal:82,risk:"Pass",flow:"nbv"},{name:"Buckeye Flex Space",bal:68,risk:"Pass",flow:"static"},
-    {name:"Pinnacle Cold Storage",bal:62,risk:"Pass",flow:"aq-down"},{name:"Northern Industrial REIT",bal:55,risk:"Pass",flow:"static"},
-    {name:"CrossDock Partners",bal:48,risk:"Pass",flow:"nbv"},{name:"Heartland Last Mile",bal:40,risk:"Pass",flow:"outflow"},
-    {name:"Summit Fulfillment",bal:30,risk:"Pass",flow:"static"},
-  ],
-  "Retail CRE": [
-    {name:"Towne Centre Mall LP",bal:72,risk:"Substandard",flow:"aq-up"},{name:"Heritage Shopping Plaza",bal:58,risk:"Watch",flow:"static"},
-    {name:"Crossroads Retail REIT",bal:52,risk:"Pass",flow:"outflow"},{name:"Maple Grove Strip Center",bal:45,risk:"Pass",flow:"static"},
-    {name:"Lakeshore Marketplace",bal:38,risk:"Pass",flow:"nbv"},{name:"Eastgate Commons",bal:35,risk:"Watch",flow:"aq-up"},
-    {name:"Valley View Retail",bal:22,risk:"Pass",flow:"outflow"},{name:"Sunridge Shops",bal:18,risk:"Pass",flow:"static"},
-  ],
-  "Hospitality": [
-    {name:"Lakeshore Resort Group",bal:65,risk:"Pass",flow:"static"},{name:"Heritage Inn Collection",bal:55,risk:"Watch",flow:"aq-down"},
-    {name:"Metro Select Hotels",bal:48,risk:"Pass",flow:"nbv"},{name:"Cascade Lodge Partners",bal:42,risk:"Pass",flow:"static"},
-    {name:"Riverfront Hospitality",bal:38,risk:"Pass",flow:"outflow"},{name:"Bayview Conference Center",bal:25,risk:"Pass",flow:"nbv"},
-    {name:"Summit Stay Hotels",bal:17,risk:"Pass",flow:"outflow"},
-  ],
-  "Prof Services": [
-    {name:"Meridian Law Partners",bal:48,risk:"Pass",flow:"nbv"},{name:"Cornerstone CPA Group",bal:42,risk:"Pass",flow:"static"},
-    {name:"Summit Advisory LLC",bal:35,risk:"Pass",flow:"nbv"},{name:"Lakeview Engineering",bal:28,risk:"Pass",flow:"static"},
-    {name:"Brightpath Consulting",bal:22,risk:"Pass",flow:"outflow"},{name:"Apex Marketing Group",bal:15,risk:"Watch",flow:"aq-up"},
-  ],
-  "Restaurants": [
-    {name:"Great Lakes Restaurant Grp",bal:32,risk:"Substandard",flow:"aq-up"},{name:"Metro Dining Holdings",bal:25,risk:"Watch",flow:"static"},
-    {name:"Fireside Grill Concepts",bal:20,risk:"Pass",flow:"outflow"},{name:"Harbor Fresh Inc",bal:18,risk:"Pass",flow:"nbv"},
-    {name:"Cornerstone Catering",bal:15,risk:"Watch",flow:"aq-up"},{name:"Sunrise Bakery Chain",bal:10,risk:"Pass",flow:"outflow"},
-  ],
-  "Multifamily A": [
-    {name:"Parkview Apartments REIT",bal:135,risk:"Pass",flow:"static"},{name:"Metro Living Partners",bal:115,risk:"Pass",flow:"nbv"},
-    {name:"Lakewood Residential",bal:98,risk:"Pass",flow:"static"},{name:"Summit View Apartments",bal:85,risk:"Pass",flow:"nbv"},
-    {name:"Heritage Garden Homes",bal:72,risk:"Pass",flow:"aq-down"},{name:"Crossroads Multi-Family",bal:62,risk:"Pass",flow:"static"},
-    {name:"Riverside Community LP",bal:48,risk:"Pass",flow:"outflow"},{name:"Northgate Residential",bal:35,risk:"Pass",flow:"nbv"},
-    {name:"Bayview Living Trust",bal:13,risk:"Pass",flow:"static"},
-  ],
-  "Multifamily B": [
-    {name:"Eastside Housing Group",bal:85,risk:"Pass",flow:"static"},{name:"Willowbrook Apartments",bal:72,risk:"Pass",flow:"nbv"},
-    {name:"Gateway Residences",bal:58,risk:"Watch",flow:"aq-up"},{name:"Central Park Estates",bal:52,risk:"Pass",flow:"static"},
-    {name:"Cedar Grove Living",bal:45,risk:"Pass",flow:"nbv"},{name:"Hilltop Apartment Group",bal:38,risk:"Pass",flow:"outflow"},
-    {name:"Oakmont Housing LP",bal:30,risk:"Pass",flow:"outflow"},
-  ],
-};
-
-const DATA = {
-  industries: [
-    {name:"Healthcare",lob:"ci",start:820,outflow:-95,aq:-12,nbv:140,riskStart:3.2,riskEnd:3.4},
-    {name:"Technology",lob:"ci",start:650,outflow:-40,aq:8,nbv:110,riskStart:2.8,riskEnd:2.6},
-    {name:"Manufacturing",lob:"ci",start:540,outflow:-70,aq:-22,nbv:55,riskStart:4.1,riskEnd:4.4},
-    {name:"Retail Trade",lob:"ci",start:410,outflow:-85,aq:-18,nbv:30,riskStart:4.5,riskEnd:4.8},
-    {name:"Office",lob:"cre",start:780,outflow:-120,aq:-35,nbv:45,riskStart:5.2,riskEnd:5.6},
-    {name:"Industrial",lob:"cre",start:520,outflow:-30,aq:5,nbv:95,riskStart:3.0,riskEnd:2.9},
-    {name:"Retail CRE",lob:"cre",start:340,outflow:-55,aq:-15,nbv:20,riskStart:4.8,riskEnd:5.1},
-    {name:"Hospitality",lob:"cre",start:290,outflow:-25,aq:-8,nbv:35,riskStart:4.0,riskEnd:3.8},
-    {name:"Prof Services",lob:"sbl",start:180,outflow:-20,aq:-3,nbv:45,riskStart:3.5,riskEnd:3.3},
-    {name:"Restaurants",lob:"sbl",start:120,outflow:-30,aq:-8,nbv:15,riskStart:5.0,riskEnd:5.3},
-    {name:"Multifamily A",lob:"mfl",start:620,outflow:-40,aq:3,nbv:80,riskStart:2.5,riskEnd:2.4},
-    {name:"Multifamily B",lob:"mfl",start:380,outflow:-35,aq:-5,nbv:50,riskStart:3.2,riskEnd:3.3},
-  ],
-  migration:[[680,45,10,2,0],[20,320,38,5,1],[5,15,180,25,8],[0,2,10,95,18],[0,0,1,5,48]],
-  ratingLabels:["Pass","Watch","Substandard","Doubtful","Loss"],
-  quarters:["Q2'24","Q3'24","Q4'24","Q1'25","Q2'25","Q3'25","Q4'25","Q1'26"],
-  timeseries: {
-    "Healthcare":{balance:[720,740,760,790,800,810,820,853],concentration:[14.2,14.1,14.3,14.5,14.4,14.6,14.5,14.7],aq:[3.0,3.0,3.1,3.1,3.2,3.2,3.2,3.4]},
-    "Technology":{balance:[480,510,540,570,590,620,650,728],concentration:[9.5,9.7,10.1,10.5,10.6,11.2,11.5,12.6],aq:[2.9,2.9,2.8,2.8,2.7,2.8,2.8,2.6]},
-    "Manufacturing":{balance:[560,555,550,548,545,542,540,503],concentration:[11.1,10.6,10.3,10.1,9.8,9.8,9.6,8.7],aq:[3.8,3.9,3.9,4.0,4.0,4.1,4.1,4.4]},
-    "Office":{balance:[880,860,840,820,810,795,780,670],concentration:[17.4,16.4,15.7,15.1,14.6,14.3,13.8,11.6],aq:[4.5,4.6,4.8,4.9,5.0,5.1,5.2,5.6]},
-    "Industrial":{balance:[400,420,440,460,480,500,520,590],concentration:[7.9,8.0,8.2,8.5,8.6,9.0,9.2,10.2],aq:[3.2,3.1,3.1,3.0,3.0,3.0,3.0,2.9]},
-    "Multifamily A":{balance:[500,520,540,560,580,600,620,663],concentration:[9.9,9.9,10.1,10.3,10.4,10.8,11.0,11.5],aq:[2.6,2.6,2.5,2.5,2.5,2.5,2.5,2.4]},
-  }
-};
-DATA.industries.forEach(d=>{d.netDelta=d.outflow+d.aq+d.nbv;d.end=d.start+d.netDelta;});
+// Data is loaded from /api/portfolio_flow at bootstrap (see end of file).
+// The render code below is unchanged from the original; only the source of
+// DATA and OBLIGOR_DATA has changed.
+let DATA, OBLIGOR_DATA;
 
 let state={lob:"all",view:"industry",waterfallMode:"dollar",tsMetric:"balance",drillSort:{col:'bal',dir:'desc'}};
 function getFiltered(){return state.lob==="all"?DATA.industries:DATA.industries.filter(d=>d.lob===state.lob);}
@@ -395,7 +290,7 @@ function openDrilldown(industryName){
   const industry=DATA.industries.find(d=>d.name===industryName);if(!industry)return;
   const obligors=OBLIGOR_DATA[industryName]||[];
   document.getElementById('dd-title').textContent=industryName;
-  document.getElementById('dd-subtitle').textContent=`${industry.lob.toUpperCase()} \u00B7 ${obligors.length} obligors \u00B7 Q4 2025 \u2192 Q1 2026`;
+  document.getElementById('dd-subtitle').textContent=`${industry.lob.toUpperCase()} \u00B7 ${obligors.length} obligors \u00B7 ${DATA.bridge_label}`;
   const riskBadge=r=>{const cls=r==='Pass'?'risk-pass':r==='Watch'?'risk-watch':r==='Substandard'?'risk-sub':'risk-doubtful';return `<span class="risk-badge ${cls}">${r}</span>`;};
   const flowTag=f=>{if(f==='outflow')return '<span class="flow-tag outflow">Payoff</span>';if(f==='nbv')return '<span class="flow-tag nbv">New</span>';if(f==='aq-up')return '<span class="flow-tag aq-up">Downgrade</span>';if(f==='aq-down')return '<span class="flow-tag aq-down">Upgrade</span>';return '';};
   const outflowNames=obligors.filter(o=>o.flow==='outflow'),nbvNames=obligors.filter(o=>o.flow==='nbv'),aqNames=obligors.filter(o=>o.flow==='aq-up'||o.flow==='aq-down');
@@ -505,7 +400,24 @@ document.querySelectorAll('#ts-toggle .toggle-btn').forEach(btn=>{btn.addEventLi
 
 function renderAll(){renderKPIs();renderWaterfall();renderDetailTable();renderHeatmap();renderTimeSeries();}
 let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderAll,200);});
-renderAll();
+async function bootstrap() {
+  try {
+    const payload = await fetch('/api/portfolio_flow').then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+    DATA = payload;
+    OBLIGOR_DATA = payload.obligors;
+    DATA.industries.forEach(d => { d.netDelta = d.outflow + d.aq + d.nbv; d.end = d.start + d.netDelta; });
+    document.getElementById('period-label').textContent = DATA.bridge_label;
+    renderAll();
+  } catch (err) {
+    document.querySelector('.dashboard').insertAdjacentHTML('afterbegin',
+      `<div style="background:#fee;border:1px solid #c00;border-radius:8px;padding:14px;margin-bottom:20px;color:#900;font-family:'JetBrains Mono',monospace;font-size:12px">Failed to load data: ${err.message}</div>`);
+    console.error(err);
+  }
+}
+bootstrap();
 </script>
 </body>
 </html>

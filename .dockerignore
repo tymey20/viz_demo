@@ -1,0 +1,13 @@
+.venv/
+.git/
+.idea/
+.claude/
+__pycache__/
+*.pyc
+*.html
+!dashboards/*.html
+README.md
+CLAUDE.md
+GEMINI.md
+.dockerignore
+Dockerfile

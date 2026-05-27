@@ -52,12 +52,12 @@
   <span class="brand-name">Apex Analytics</span>
   <div class="brand-divider"></div>
   <span class="brand-dept">Credit Risk Analytics &mdash; Portfolio Health</span>
-  <a href="index.html" class="nav-link">&larr; All Dashboards</a>
+  <a href="/" class="nav-link">&larr; All Dashboards</a>
 </div>
 <div class="dashboard">
   <div class="header animate-in">
     <div class="header-left"><h1>Portfolio Health Dashboard</h1><div class="subtitle">Key risk indicators &amp; limit utilization</div></div>
-    <div class="period-label">Q1 2026</div>
+    <div class="period-label" id="period-label"></div>
   </div>
 
   <div class="section-title animate-in delay-1">Health Score Gauges</div>
@@ -72,34 +72,16 @@
 <div class="tooltip" id="tooltip"></div>
 
 <script>
+// Data is loaded from /api/gauges at bootstrap (see end of file).
+// The render code below is unchanged from the original; only the source of the
+// dataset globals has changed.
+let GAUGES, DONUTS, SPARKLINES;
 const ttEl = document.getElementById('tooltip');
 function showTooltip(evt, html) { ttEl.innerHTML=html; ttEl.classList.add('visible'); ttEl.style.left=Math.min(evt.clientX+12,window.innerWidth-280)+'px'; ttEl.style.top=Math.min(evt.clientY-10,window.innerHeight-100)+'px'; }
 function hideTooltip() { ttEl.classList.remove('visible'); }
 
-const GAUGES = [
-  { title:"Portfolio Health Score", value:78, max:100, trend:"+3pts from Q4", trendDir:"up" },
-  { title:"Credit Quality Index", value:72, max:100, trend:"-1pt from Q4", trendDir:"down" },
-  { title:"Diversification Score", value:85, max:100, trend:"+2pts from Q4", trendDir:"up" },
-  { title:"Stress Resilience", value:68, max:100, trend:"+5pts from Q4", trendDir:"up" },
-];
 
-const DONUTS = [
-  { title:"Total Portfolio", pct:82, limit:8.2, used:6.7 },
-  { title:"CRE Concentration", pct:74, limit:3.5, used:2.6 },
-  { title:"Single Obligor", pct:45, limit:0.5, used:0.225 },
-  { title:"Industry Limit", pct:68, limit:1.8, used:1.22 },
-  { title:"Geographic Limit", pct:55, limit:2.0, used:1.1 },
-  { title:"Watchlist Ratio", pct:12, limit:0.8, used:0.096 },
-];
 
-const SPARKLINES = [
-  { title:"Portfolio Health", values:[68,70,72,74,73,75,75,78], unit:"" },
-  { title:"Credit Quality", values:[76,75,74,73,74,73,73,72], unit:"" },
-  { title:"Diversification", values:[80,81,82,82,83,84,84,85], unit:"" },
-  { title:"Total Utilization", values:[75,76,78,79,80,80,81,82], unit:"%" },
-  { title:"CRE Concentration", values:[68,69,70,71,72,73,73,74], unit:"%" },
-  { title:"Watchlist Ratio", values:[8,9,10,11,12,13,12,12], unit:"%" },
-];
 
 function gaugeColor(pct) {
   if (pct >= 75) return 'var(--accent-green)';
@@ -272,9 +254,22 @@ function renderSparklines() {
   });
 }
 
-renderGauges();
-renderDonuts();
-setTimeout(renderSparklines, 50); // Small delay so DOM is ready for width calculations
+async function bootstrap() {
+  try {
+    const payload = await fetch('/api/gauges').then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+    GAUGES = payload.gauges; DONUTS = payload.donuts; SPARKLINES = payload.sparklines;
+    document.getElementById('period-label').textContent = payload.period_label;
+    renderGauges(); renderDonuts(); setTimeout(renderSparklines, 50);
+  } catch (err) {
+    document.body.insertAdjacentHTML('afterbegin',
+      `<div style="background:#fee;border:1px solid #c00;border-radius:8px;padding:14px;margin:20px;color:#900;font-family:'JetBrains Mono',monospace;font-size:12px">Failed to load data: ${err.message}</div>`);
+    console.error(err);
+  }
+}
+bootstrap();
 </script>
 </body>
 </html>

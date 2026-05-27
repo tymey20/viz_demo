@@ -73,12 +73,12 @@
   <span class="brand-name">Apex Analytics</span>
   <div class="brand-divider"></div>
   <span class="brand-dept">Credit Risk Analytics &mdash; Portfolio Strategy</span>
-  <a href="index.html" class="nav-link">&larr; All Dashboards</a>
+  <a href="/" class="nav-link">&larr; All Dashboards</a>
 </div>
 <div class="dashboard">
   <div class="header animate-in">
     <div class="header-left"><h1>Risk-Return Scatter</h1><div class="subtitle">Industry segment positioning &mdash; weighted by exposure</div></div>
-    <div class="period-label">Q1 2026</div>
+    <div class="period-label" id="period-label"></div>
   </div>
   <div class="filter-bar animate-in delay-1">
     <div class="filter-group">
@@ -108,23 +108,13 @@
 <div class="tooltip" id="tooltip"></div>
 
 <script>
+// Data is loaded from /api/scatter at bootstrap (see end of file).
+// The render code below is unchanged from the original; only the source of the
+// dataset globals has changed.
+let SEGMENTS;
 const LOB_COLORS = { cre: "#CC0000", ci: "#2e7d32", sbl: "#b8860b", mfl: "#5c3d6e" };
 const LOB_LABELS = { cre: "CRE", ci: "C&I", sbl: "SBL", mfl: "Multifamily" };
 
-const SEGMENTS = [
-  { name:"Healthcare",      lob:"ci",  exposure:853,  risk:3.4, spread:285 },
-  { name:"Technology",       lob:"ci",  exposure:728,  risk:2.6, spread:225 },
-  { name:"Manufacturing",   lob:"ci",  exposure:503,  risk:4.4, spread:340 },
-  { name:"Retail Trade",    lob:"ci",  exposure:337,  risk:4.8, spread:380 },
-  { name:"Office",          lob:"cre", exposure:670,  risk:5.6, spread:420 },
-  { name:"Industrial",      lob:"cre", exposure:590,  risk:2.9, spread:210 },
-  { name:"Retail CRE",      lob:"cre", exposure:290,  risk:5.1, spread:395 },
-  { name:"Hospitality",     lob:"cre", exposure:292,  risk:3.8, spread:310 },
-  { name:"Prof Services",   lob:"sbl", exposure:202,  risk:3.3, spread:265 },
-  { name:"Restaurants",     lob:"sbl", exposure:97,   risk:5.3, spread:435 },
-  { name:"Multifamily A",   lob:"mfl", exposure:663,  risk:2.4, spread:185 },
-  { name:"Multifamily B",   lob:"mfl", exposure:390,  risk:3.3, spread:240 },
-];
 
 let state = { lob: "all" };
 const ttEl = document.getElementById('tooltip');
@@ -245,7 +235,22 @@ document.querySelectorAll('.filter-btn[data-filter="lob"]').forEach(btn => {
 
 function renderAll() { renderKPIs(); renderScatter(); renderTable(); }
 let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderAll, 200); });
-renderAll();
+async function bootstrap() {
+  try {
+    const payload = await fetch('/api/scatter').then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+    SEGMENTS = payload.segments;
+    document.getElementById('period-label').textContent = payload.period_label;
+    renderAll();
+  } catch (err) {
+    document.body.insertAdjacentHTML('afterbegin',
+      `<div style="background:#fee;border:1px solid #c00;border-radius:8px;padding:14px;margin:20px;color:#900;font-family:'JetBrains Mono',monospace;font-size:12px">Failed to load data: ${err.message}</div>`);
+    console.error(err);
+  }
+}
+bootstrap();
 </script>
 </body>
 </html>
