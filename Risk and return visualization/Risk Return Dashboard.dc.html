@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="./deals-data.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #06101C; }
+  .js-plotly-plot .plotly .modebar { display: none !important; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  input[type=range]{ -webkit-appearance:none; appearance:none; height:4px; border-radius:4px; background:rgba(255,255,255,0.16); outline:none; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:50%; background:#C9A24B; cursor:pointer; border:2px solid #06101C; }
+  input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:#C9A24B; cursor:pointer; border:2px solid #06101C; }
+</style>
+</helmet>
+<div style="min-height:100vh; background:radial-gradient(1200px 600px at 80% -10%, #0E2540 0%, #06101C 60%); color:#EAF1F8; font-family:'IBM Plex Sans',sans-serif; padding:28px 34px 44px;">
+
+  <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:24px; flex-wrap:wrap;">
+    <div>
+      <div style="font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Portfolio Credit Analytics</div>
+      <div style="font-size:30px; font-weight:700; letter-spacing:-0.4px; margin-top:6px;">Risk &amp; Return — What a Good Deal Looks Like</div>
+      <div style="font-size:14px; color:#9DB2C7; margin-top:6px; max-width:680px;">Every deal measured on <span style="color:#EAF1F8; font-weight:600;">Return on Blended Capital</span> (Net Income ÷ regulatory + economic capital) against the <span style="color:#C9A24B; font-weight:600;">15% hurdle</span>. Filter, brush, and click any view — everything cross-filters.</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <div style="display:flex; align-items:center; gap:8px; padding:7px 13px; border-radius:20px; border:1px solid {{ dataBadgeBorder }}; background:{{ dataBadgeBg }};">
+        <span style="width:8px; height:8px; border-radius:50%; background:{{ dataBadgeDot }};"></span>
+        <span style="font-size:11.5px; font-weight:600; color:{{ dataBadgeColor }};">{{ dataBadge }}</span>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; padding:12px 18px; border:1px solid rgba(201,162,75,0.4); border-radius:10px; background:rgba(201,162,75,0.08);">
+        <div style="font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#C9A24B; font-weight:600;">Hurdle RoBC</div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:30px; font-weight:600; color:#C9A24B; line-height:1;">15.0%</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-top:24px;">
+    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px 18px;">
+      <div style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Deals in view</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; margin-top:8px;">{{ kDeals }}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px 18px;">
+      <div style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Net Income</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; margin-top:8px;">{{ kNI }}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px 18px;">
+      <div style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Blended Capital</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; margin-top:8px;">{{ kBC }}</div>
+    </div>
+    <div style="background:rgba(70,185,138,0.07); border:1px solid rgba(70,185,138,0.3); border-radius:12px; padding:16px 18px;">
+      <div style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#7FCBA8; font-weight:600;">Portfolio RoBC</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; margin-top:8px; color:#5FD3A3;">{{ kRoBC }}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px 18px;">
+      <div style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">% Above Hurdle</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; margin-top:8px;">{{ kPct }}</div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:22px; flex-wrap:wrap; margin-top:20px; padding:14px 18px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:12px;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Line of Business</span>
+      <div style="display:flex; gap:8px;">
+        <sc-for list="{{ lobOptions }}" as="o" hint-placeholder-count="3">
+          <button onClick="{{ o.toggle }}" style="{{ o.style }}">{{ o.name }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="width:1px; height:26px; background:rgba(255,255,255,0.1);"></div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Show</span>
+      <div style="display:flex; gap:0; border:1px solid rgba(255,255,255,0.12); border-radius:8px; overflow:hidden;">
+        <sc-for list="{{ hurdleOptions }}" as="h" hint-placeholder-count="3">
+          <button onClick="{{ h.select }}" style="{{ h.style }}">{{ h.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="width:1px; height:26px; background:rgba(255,255,255,0.1);"></div>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Max Rating (worst grade)</span>
+      <input type="range" min="1" max="10" step="1" value="{{ ratingMax }}" onInput="{{ onRating }}" style="width:150px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:14px; color:#C9A24B; width:18px; font-weight:600;">{{ ratingMax }}</span>
+    </div>
+    <sc-if value="{{ hasIndustry }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; align-items:center; gap:8px; padding:5px 12px; background:rgba(201,162,75,0.14); border:1px solid rgba(201,162,75,0.4); border-radius:20px;">
+        <span style="font-size:12px; color:#E8D4A0;">Industry: <span style="font-weight:600;">{{ activeIndustry }}</span></span>
+        <button onClick="{{ clearIndustry }}" style="background:none; border:none; color:#E8D4A0; cursor:pointer; font-size:15px; line-height:1; padding:0;">×</button>
+      </div>
+    </sc-if>
+    <button onClick="{{ reset }}" style="margin-left:auto; background:none; border:1px solid rgba(255,255,255,0.16); color:#9DB2C7; font-family:'IBM Plex Sans',sans-serif; font-size:12px; font-weight:500; padding:7px 14px; border-radius:8px; cursor:pointer;">Reset filters</button>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1.55fr 1fr; gap:18px; margin-top:18px;">
+    <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px 18px 8px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between;">
+        <div style="font-size:15px; font-weight:600;">Risk–Return Map</div>
+        <div style="font-size:12px; color:#8FA6BC;">Capital deployed vs RoBC · bubble = net income</div>
+      </div>
+      <div id="chart-map" style="width:100%; height:430px; margin-top:6px;"></div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:18px;">
+      <div style="background:linear-gradient(160deg, rgba(70,185,138,0.12), rgba(201,162,75,0.06)); border:1px solid rgba(70,185,138,0.28); border-radius:14px; padding:18px 20px;">
+        <div style="font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:#7FCBA8; font-weight:600;">Profile of a Good Deal</div>
+        <div style="font-size:12.5px; color:#9DB2C7; margin-top:3px;">Median characteristics of the <span style="color:#EAF1F8; font-weight:600;">{{ pCount }}</span> deals clearing the hurdle in this view</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; margin-top:16px;">
+          <div><div style="font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">RoBC</div><div style="font-family:'IBM Plex Mono',monospace; font-size:21px; font-weight:600; color:#5FD3A3; margin-top:3px;">{{ pRoBC }}</div></div>
+          <div><div style="font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Exposure</div><div style="font-family:'IBM Plex Mono',monospace; font-size:21px; font-weight:600; margin-top:3px;">{{ pExp }}</div></div>
+          <div><div style="font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Tenor</div><div style="font-family:'IBM Plex Mono',monospace; font-size:21px; font-weight:600; margin-top:3px;">{{ pTenor }}</div></div>
+          <div><div style="font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Risk Rating</div><div style="font-family:'IBM Plex Mono',monospace; font-size:21px; font-weight:600; margin-top:3px;">{{ pRating }}</div></div>
+        </div>
+        <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.1);">
+          <div style="font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Where they concentrate</div>
+          <div style="font-size:13.5px; color:#EAF1F8; margin-top:5px; line-height:1.5;">{{ pInds }}</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px 18px 8px; flex:1;">
+        <div style="font-size:15px; font-weight:600;">Return Distribution by Line of Business</div>
+        <div style="font-size:12px; color:#8FA6BC; margin-top:1px;">Where the spread really sits — not just the average</div>
+        <div id="chart-dist" style="width:100%; height:250px; margin-top:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px 18px 8px; margin-top:18px;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between;">
+      <div style="font-size:15px; font-weight:600;">Industry Scorecard — Capital-Weighted RoBC</div>
+      <div style="font-size:12px; color:#8FA6BC;">Click a bar to focus that industry across every view</div>
+    </div>
+    <div id="chart-score" style="width:100%; height:440px; margin-top:6px;"></div>
+  </div>
+
+  <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px 20px 20px; margin-top:18px;">
+    <div style="display:flex; align-items:baseline; justify-content:space-between;">
+      <div style="font-size:15px; font-weight:600;">Score a Deal — How Does It Compare?</div>
+      <div style="font-size:12px; color:#8FA6BC;">Set a deal's profile and see how it stacks up against the book</div>
+    </div>
+    <div style="display:grid; grid-template-columns:368px 1fr; gap:28px; margin-top:18px;">
+
+      <div style="display:flex; flex-direction:column; gap:15px;">
+        <div>
+          <div style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600; margin-bottom:6px;">Line of Business</div>
+          <select value="{{ cLob }}" onChange="{{ setCLob }}" style="width:100%; background:#0C1B2E; color:#EAF1F8; border:1px solid rgba(255,255,255,0.14); border-radius:8px; padding:9px 11px; font-family:'IBM Plex Sans',sans-serif; font-size:13px; cursor:pointer;">
+            <sc-for list="{{ lobChoices }}" as="o" hint-placeholder-count="3"><option value="{{ o }}">{{ o }}</option></sc-for>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600; margin-bottom:6px;">Industry</div>
+          <select value="{{ cInd }}" onChange="{{ setCInd }}" style="width:100%; background:#0C1B2E; color:#EAF1F8; border:1px solid rgba(255,255,255,0.14); border-radius:8px; padding:9px 11px; font-family:'IBM Plex Sans',sans-serif; font-size:13px; cursor:pointer;">
+            <sc-for list="{{ indChoices }}" as="o" hint-placeholder-count="6"><option value="{{ o }}">{{ o }}</option></sc-for>
+          </select>
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;"><span style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Proposed RoBC</span><span style="font-family:'IBM Plex Mono',monospace; font-size:14px; color:#C9A24B; font-weight:600;">{{ cRoBClabel }}</span></div>
+          <input type="range" min="-5" max="35" step="0.5" value="{{ cRoBC }}" onInput="{{ onCRoBC }}" style="width:100%;">
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;"><span style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Exposure</span><span style="font-family:'IBM Plex Mono',monospace; font-size:14px; color:#C7D6E5; font-weight:600;">{{ cExpLabel }}</span></div>
+          <input type="range" min="1" max="150" step="1" value="{{ cExposure }}" onInput="{{ onCExp }}" style="width:100%;">
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;"><span style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600;">Risk Rating</span><span style="font-family:'IBM Plex Mono',monospace; font-size:14px; color:#C7D6E5; font-weight:600;">{{ cRating }}</span></div>
+          <input type="range" min="1" max="10" step="1" value="{{ cRating }}" onInput="{{ onCRating }}" style="width:100%;">
+        </div>
+        <div>
+          <div style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#8FA6BC; font-weight:600; margin-bottom:8px;">Product Mix</div>
+          <div style="display:flex; flex-direction:column; gap:11px;">
+            <sc-for list="{{ mixControls }}" as="m" hint-placeholder-count="4">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="width:10px; height:10px; border-radius:2px; background:{{ m.color }}; flex:none;"></span>
+                <span style="font-size:12.5px; color:#C7D6E5; width:140px; flex:none;">{{ m.name }}</span>
+                <input type="range" min="0" max="100" step="1" value="{{ m.val }}" onInput="{{ m.oninput }}" style="flex:1;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:#9DB2C7; width:36px; text-align:right; flex:none;">{{ m.pct }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; align-items:center; gap:18px; padding:15px 20px; border-radius:12px; border:1px solid {{ verdictBorder }}; background:{{ verdictBg }};">
+          <div style="font-size:21px; font-weight:700; color:{{ verdictColor }}; white-space:nowrap; letter-spacing:-0.2px;">{{ verdict }}</div>
+          <div style="font-size:13px; color:#C7D6E5; line-height:1.55;">{{ percentileText }}<br><span style="color:#8FA6BC;">Peer median {{ peerMedianText }} · {{ deltaText }} vs hurdle · vs {{ peerScope }}</span></div>
+        </div>
+        <div>
+          <div style="font-size:12.5px; color:#9DB2C7; margin-bottom:3px;">Where this deal's return lands among its peers</div>
+          <div id="chart-cmp-dist" style="width:100%; height:190px;"></div>
+        </div>
+        <div>
+          <div style="font-size:12.5px; color:#9DB2C7; margin-bottom:3px;">Product mix vs the deals that beat the hurdle</div>
+          <div id="chart-cmp-mix" style="width:100%; height:128px;"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.LOBS = ['Institutional Banking','Real Estate','Middle Market Business Banking'];
+    this.LOBCOLOR = {
+      'Institutional Banking':'#4F9AD7',
+      'Real Estate':'#C9A24B',
+      'Middle Market Business Banking':'#5FB389'
+    };
+    this.PRODUCTS = [
+      { key:'lending', name:'Lending', color:'#4F9AD7' },
+      { key:'deposits', name:'Deposits', color:'#5FB389' },
+      { key:'ep', name:'EP', color:'#C9A24B' },
+      { key:'capmkts', name:'Capital Markets', color:'#B07FC9' }
+    ];
+    this.buildData();
+    const cLob = this.LOBS.indexOf('Middle Market Business Banking')>=0 ? 'Middle Market Business Banking' : this.LOBS[0];
+    this.state = {
+      lobs: this.LOBS.slice(),
+      hurdle: 'all',
+      ratingMax: 10,
+      industry: null,
+      cLob: cLob,
+      cInd: this.indByLob[cLob][0],
+      cRoBC: 16,
+      cExposure: 8,
+      cRating: 4,
+      cMix: { lending:58, deposits:22, ep:12, capmkts:8 }
+    };
+    this._scoreBound = false;
+  }
+
+  /* ---------- data source: real (window.DEALS) or synthetic fallback ---------- */
+  buildData(){
+    const raw = (typeof window!=='undefined' && Array.isArray(window.DEALS)) ? window.DEALS : null;
+    if(raw && raw.length){
+      this.allDeals = this.normalizeDeals(raw);
+      this.usingRealData = true;
+    } else {
+      this.allDeals = this.genDeals();
+      this.usingRealData = false;
+    }
+    this.maxNI = Math.max.apply(null, this.allDeals.map(d=>d.ni).concat([1]));
+    // Derive the line-of-business set from the data (live mode), so any
+    // additional internal LOBs appear with their own series, color and filter.
+    if(this.usingRealData){
+      const seen=[];
+      this.allDeals.forEach(d=>{ if(seen.indexOf(d.lob)<0) seen.push(d.lob); });
+      const canon=['Institutional Banking','Real Estate','Middle Market Business Banking'];
+      this.LOBS = canon.filter(l=>seen.indexOf(l)>=0).concat(seen.filter(l=>canon.indexOf(l)<0).sort());
+      const fixed={ 'Institutional Banking':'#4F9AD7','Real Estate':'#C9A24B','Middle Market Business Banking':'#5FB389' };
+      const palette=['#B07FC9','#E0825B','#5BC8C8','#D98AB0','#8FA66B','#C98F5B','#7FA8E0','#69C58C'];
+      this.LOBCOLOR={}; let pi=0;
+      this.LOBS.forEach(l=>{ this.LOBCOLOR[l]=fixed[l] || palette[(pi++) % palette.length]; });
+    }
+    this.indByLob = {};
+    this.LOBS.forEach(l=>this.indByLob[l]=[]);
+    this.allDeals.forEach(d=>{ if(!this.indByLob[d.lob]) this.indByLob[d.lob]=[]; if(this.indByLob[d.lob].indexOf(d.industry)<0) this.indByLob[d.lob].push(d.industry); });
+    Object.keys(this.indByLob).forEach(k=>this.indByLob[k].sort());
+  }
+
+  // Conservative: map only obvious abbreviations to the three named LOBs;
+  // anything else is preserved verbatim so your real internal LOB names show.
+  shortLob(lob){
+    if(lob==='Institutional Banking') return 'Institutional';
+    if(lob==='Middle Market Business Banking') return 'Middle Market';
+    if(lob==='Real Estate') return 'Real Estate';
+    return lob && lob.length>16 ? lob.slice(0,15)+'…' : (lob||'—');
+  }
+
+  matchLob(v){
+    const raw=String(v==null?'':v).trim();
+    if(!raw) return 'Unclassified';
+    const s=raw.toLowerCase();
+    if(/instit/.test(s)) return 'Institutional Banking';
+    if(/middle|mid[- ]?market|mmbb/.test(s)) return 'Middle Market Business Banking';
+    if(/^re$|real ?estate|^cre$/.test(s)) return 'Real Estate';
+    return raw;
+  }
+
+  coerceMix(m){
+    const g=(...keys)=>{ for(const k of keys){ if(m[k]!=null && m[k]!==''){ const n=parseFloat(m[k]); if(!isNaN(n)) return Math.max(0,n); } } return 0; };
+    let o={
+      lending:  g('lending','loans','loan'),
+      deposits: g('deposits','deposit','dda','depository'),
+      ep:       g('ep','payments','electronicPayments','electronic_payments','treasury','tm','cashManagement'),
+      capmkts:  g('capmkts','capitalMarkets','capital_markets','capMarkets','markets')
+    };
+    const s=(o.lending+o.deposits+o.ep+o.capmkts);
+    if(s<=0) return null;
+    return { lending:o.lending/s*100, deposits:o.deposits/s*100, ep:o.ep/s*100, capmkts:o.capmkts/s*100 };
+  }
+
+  normalizeDeals(raw){
+    const r=this.rng(42);
+    const norm=()=>{ let u=0,v=0; while(u===0)u=r(); while(v===0)v=r(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+    const num=(...xs)=>{ for(const x of xs){ if(x===0) return 0; if(x!=null && x!=='' && !isNaN(parseFloat(x))) return parseFloat(x); } return null; };
+    const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+    const tenorDefault={ 'Institutional Banking':5,'Real Estate':7,'Middle Market Business Banking':3.5 };
+    return raw.map((row,i)=>{
+      const lob = this.matchLob(row.lob ?? row.lineOfBusiness ?? row.LOB ?? row.businessLine);
+      const industry = (row.industry ?? row.Industry ?? row.sector ?? 'Unclassified') + '';
+      let bc = num(row.blendedCapital, row.bc, row.capital, row.economicCapital);
+      let ni = num(row.netIncome, row.ni, row.net_income, row.income);
+      let robc = num(row.robc, row.RoBC, row.returnOnBlendedCapital);
+      if(robc==null && bc && bc>0 && ni!=null) robc = ni/bc*100;
+      if(robc==null) robc = 0;
+      if((ni==null) && bc!=null) ni = robc/100*bc;
+      if(ni==null) ni = 0;
+      let exposure = num(row.exposure, row.ead, row.EAD, row.commitment, row.balance);
+      if((bc==null || bc===0) && exposure) bc = exposure*0.10;
+      if(!exposure && bc) exposure = bc/0.10;
+      if(!exposure) exposure = 1e6;
+      if(!bc) bc = exposure*0.10;
+      let rating = num(row.rating, row.riskRating, row.grade, row.pdGrade);
+      if(rating==null) rating = 5;
+      rating = Math.round(clamp(rating,1,10));
+      let tenor = num(row.tenor, row.tenorYears, row.term, row.maturity);
+      if(tenor==null) tenor = tenorDefault[lob] || 4;
+      let spread = num(row.spread, row.spreadBps, row.margin);
+      if(spread==null) spread = Math.round(clamp(90 + rating*30 + (robc-14)*4, 60, 600));
+      let mix = (row.mix && typeof row.mix==='object') ? this.coerceMix(row.mix) : this.coerceMix(row);
+      if(!mix){ const rf=clamp(0.5+(robc-14)/20,0.05,0.95); mix=this.genMix(lob, rf, norm); }
+      return { id:(row.id ?? row.dealId ?? row.deal_id ?? ('D'+(10000+i)))+'', industry, lob,
+        rating, robc:Math.round(robc*10)/10, exposure, bc, ni, spread, tenor:Math.round(tenor*10)/10, mix };
+    });
+  }
+
+  /* ---------- data ---------- */
+  rng(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  genDeals(){
+    const r = this.rng(20260601);
+    const norm = ()=>{ let u=0,v=0; while(u===0)u=r(); while(v===0)v=r(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+    const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+    const INDS=[
+      {n:'Technology',b:21,lobs:['Institutional Banking','Middle Market Business Banking']},
+      {n:'Professional Services',b:20,lobs:['Middle Market Business Banking']},
+      {n:'Business Services',b:19,lobs:['Middle Market Business Banking','Institutional Banking']},
+      {n:'Healthcare',b:17,lobs:['Institutional Banking','Middle Market Business Banking']},
+      {n:'Financial Institutions',b:16,lobs:['Institutional Banking']},
+      {n:'Telecom & Media',b:15,lobs:['Institutional Banking']},
+      {n:'Consumer Goods',b:14,lobs:['Middle Market Business Banking','Institutional Banking']},
+      {n:'Transportation & Logistics',b:14,lobs:['Middle Market Business Banking','Institutional Banking']},
+      {n:'Commercial Real Estate',b:13,lobs:['Real Estate']},
+      {n:'Manufacturing',b:13,lobs:['Institutional Banking','Middle Market Business Banking']},
+      {n:'Education',b:13,lobs:['Middle Market Business Banking']},
+      {n:'Residential Real Estate',b:12,lobs:['Real Estate']},
+      {n:'Retail',b:12,lobs:['Middle Market Business Banking']},
+      {n:'Agriculture',b:12,lobs:['Middle Market Business Banking']},
+      {n:'Energy',b:11,lobs:['Institutional Banking']},
+      {n:'Construction',b:11,lobs:['Real Estate','Middle Market Business Banking']},
+      {n:'Hospitality & Leisure',b:10,lobs:['Real Estate','Middle Market Business Banking']},
+      {n:'Public Sector / Municipals',b:9,lobs:['Institutional Banking']}
+    ];
+    const LP={
+      'Institutional Banking':{expMed:55,sig:0.55,adj:-1.5,tmin:2,tmax:8},
+      'Real Estate':{expMed:20,sig:0.5,adj:0,tmin:4,tmax:10},
+      'Middle Market Business Banking':{expMed:7,sig:0.6,adj:2.5,tmin:1,tmax:6}
+    };
+    const deals=[]; const N=480;
+    for(let i=0;i<N;i++){
+      const ind=INDS[Math.floor(r()*INDS.length)];
+      const lobName=ind.lobs[Math.floor(r()*ind.lobs.length)];
+      const lp=LP[lobName];
+      let rating=Math.round(clamp(2 + (22-ind.b)*0.34 + norm()*1.4, 1, 10));
+      const rf=clamp(0.5 + norm()*0.24 + (lobName==='Institutional Banking'?0.08:0) - (lobName==='Real Estate'?0.12:0), 0.02, 0.98);
+      let robc=clamp(ind.b + lp.adj + (rf-0.5)*7 + norm()*3.6, -4, 35);
+      const exposure=lp.expMed*Math.exp(norm()*lp.sig)*1e6;
+      const capRatio=0.06 + rating*0.013;
+      const bc=exposure*capRatio;
+      const ni=robc/100*bc;
+      const spread=Math.round(clamp(90 + rating*30 + (robc-14)*4 + norm()*25, 70, 520));
+      const tenor=Math.round(clamp(lp.tmin + r()*(lp.tmax-lp.tmin), 1, 12)*10)/10;
+      const mix=this.genMix(lobName, rf, norm);
+      deals.push({ id:'D'+(10000+i), industry:ind.n, lob:lobName, rating, robc:Math.round(robc*10)/10, exposure, bc, ni, spread, tenor, mix });
+    }
+    return deals;
+  }
+  genMix(lob, rf, norm){
+    // Every deal carries lending; rf (relationship factor) raises cross-sell.
+    const baseLend = lob==='Real Estate'?80 : lob==='Institutional Banking'?54 : 64;
+    let lending=Math.max(20, Math.min(92, baseLend - rf*38 + norm()*6));
+    const rem=100-lending;
+    // weights for [deposits, ep, capmkts]
+    const w = lob==='Institutional Banking'?[0.34,0.26,0.40] : lob==='Real Estate'?[0.58,0.30,0.12] : [0.50,0.34,0.16];
+    let dep=Math.max(0, rem*w[0]*(1+norm()*0.12));
+    let ep=Math.max(0, rem*w[1]*(1+norm()*0.12));
+    let cm=Math.max(0, rem*w[2]*(1+norm()*0.12));
+    const s=lending+dep+ep+cm;
+    return { lending:Math.round(lending/s*100), deposits:Math.round(dep/s*100), ep:Math.round(ep/s*100), capmkts:Math.round(cm/s*100) };
+  }
+
+  /* ---------- helpers ---------- */
+  fmtUSD(v){ const a=Math.abs(v); if(a>=1e9) return '$'+(v/1e9).toFixed(2)+'B'; if(a>=1e6) return '$'+(v/1e6).toFixed(0)+'M'; if(a>=1e3) return '$'+(v/1e3).toFixed(0)+'k'; return '$'+v.toFixed(0); }
+  median(arr){ if(!arr.length) return 0; const s=arr.slice().sort((a,b)=>a-b); const m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
+
+  getFiltered(){
+    const s=this.state;
+    return this.allDeals.filter(d=>{
+      if(s.lobs.indexOf(d.lob)<0) return false;
+      if(d.rating>s.ratingMax) return false;
+      if(s.industry && d.industry!==s.industry) return false;
+      if(s.hurdle==='above' && d.robc<15) return false;
+      if(s.hurdle==='below' && d.robc>=15) return false;
+      return true;
+    });
+  }
+
+  /* ---------- lifecycle ---------- */
+  componentDidMount(){
+    if(!this.usingRealData && typeof window!=='undefined' && Array.isArray(window.DEALS) && window.DEALS.length){
+      this.buildData();
+      const cLob = this.LOBS.indexOf('Middle Market Business Banking')>=0 ? 'Middle Market Business Banking' : this.LOBS[0];
+      this.setState({ lobs:this.LOBS.slice(), cLob:cLob, cInd: this.indByLob[cLob] ? this.indByLob[cLob][0] : this.state.cInd, industry:null });
+    }
+    this.waitPlot();
+    window.addEventListener('resize', this._rz=()=>this.resizeAll());
+  }
+  componentWillUnmount(){ window.removeEventListener('resize', this._rz); }
+  componentDidUpdate(){ if(window.Plotly) this.drawAll(); }
+  waitPlot(){ if(window.Plotly){ this.drawAll(); } else { setTimeout(()=>this.waitPlot(), 120); } }
+  resizeAll(){ ['chart-map','chart-score','chart-cmp-dist','chart-cmp-mix','chart-dist'].forEach(id=>{ const el=document.getElementById(id); if(el&&el.data) window.Plotly.Plots.resize(el); }); }
+
+  baseLayout(extra){
+    return Object.assign({
+      paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+      font:{ family:'IBM Plex Sans, sans-serif', color:'#9DB2C7', size:12 },
+      margin:{ l:60, r:20, t:14, b:46 },
+      hoverlabel:{ bgcolor:'#0E2238', bordercolor:'rgba(255,255,255,0.15)', font:{ family:'IBM Plex Sans', color:'#EAF1F8', size:12 } },
+      showlegend:false
+    }, extra||{});
+  }
+
+  drawAll(){
+    const data=this.getFiltered();
+    this.drawMap(data); this.drawScore(); this.drawDist(data);
+    this.drawCmpDist(); this.drawCmpMix();
+  }
+
+  /* ---------- comparator helpers ---------- */
+  computePeers(){
+    const s=this.state;
+    let p=this.allDeals.filter(d=>d.lob===s.cLob && d.industry===s.cInd);
+    if(p.length<8) p=this.allDeals.filter(d=>d.lob===s.cLob);
+    return p;
+  }
+  isSameIndustryPeers(){ const s=this.state; return this.allDeals.filter(d=>d.lob===s.cLob && d.industry===s.cInd).length>=8; }
+  normMix(m){ let s=0; this.PRODUCTS.forEach(p=>s+=(+m[p.key]||0)); s=s||1; const o={}; this.PRODUCTS.forEach(p=>o[p.key]=(+m[p.key]||0)/s*100); return o; }
+  medianMix(arr){
+    const o={};
+    this.PRODUCTS.forEach(p=>{ o[p.key]=this.median(arr.map(d=>(d.mix&&d.mix[p.key])||0)); });
+    let s=0; this.PRODUCTS.forEach(p=>s+=o[p.key]); s=s||1;
+    this.PRODUCTS.forEach(p=>o[p.key]=o[p.key]/s*100);
+    return o;
+  }
+
+  drawMap(data){
+    const el=document.getElementById('chart-map'); if(!el) return;
+    const sizeref=2.0*this.maxNI/(46*46);
+    const traces=this.LOBS.filter(l=>this.state.lobs.indexOf(l)>=0).map(lob=>{
+      const dd=data.filter(d=>d.lob===lob);
+      return {
+        type:'scattergl', mode:'markers', name:lob,
+        x:dd.map(d=>d.bc), y:dd.map(d=>d.robc),
+        customdata:dd.map(d=>[d.id,d.industry,d.lob,this.fmtUSD(d.ni),this.fmtUSD(d.exposure),d.rating,d.tenor]),
+        marker:{ size:dd.map(d=>d.ni), sizemode:'area', sizeref:sizeref, sizemin:4,
+                 color:this.LOBCOLOR[lob], opacity:0.72, line:{ color:'rgba(255,255,255,0.25)', width:0.5 } },
+        hovertemplate:'<b>%{customdata[0]}</b> · %{customdata[1]}<br>%{customdata[2]}<br>RoBC: <b>%{y:.1f}%</b> · Capital: %{x:$,.0f}<br>Net income: %{customdata[3]} · Exposure: %{customdata[4]}<br>Rating: %{customdata[5]} · Tenor: %{customdata[6]}y<extra></extra>'
+      };
+    });
+    const ys=data.map(d=>d.robc);
+    const ymin=ys.length?Math.min.apply(null,ys):-5; const ymax=ys.length?Math.max.apply(null,ys):30;
+    const yLo=Math.min(-5, Math.floor(ymin)-2); const yHi=Math.max(30, Math.ceil(ymax)+2);
+    const layout=this.baseLayout({
+      margin:{ l:58, r:18, t:10, b:48 },
+      xaxis:{ type:'log', title:{ text:'Blended Capital ($, log scale)', font:{size:12} }, gridcolor:'rgba(255,255,255,0.06)', zeroline:false, tickprefix:'$', tickformat:'~s' },
+      yaxis:{ title:{ text:'Return on Blended Capital (%)', font:{size:12} }, gridcolor:'rgba(255,255,255,0.06)', zeroline:true, zerolinecolor:'rgba(255,255,255,0.14)', ticksuffix:'%', range:[yLo,yHi] },
+      shapes:[
+        { type:'rect', xref:'paper', x0:0, x1:1, yref:'y', y0:15, y1:yHi, fillcolor:'rgba(70,185,138,0.05)', line:{width:0}, layer:'below' },
+        { type:'line', xref:'paper', x0:0, x1:1, yref:'y', y0:15, y1:15, line:{ color:'#C9A24B', width:1.4, dash:'dash' } }
+      ],
+      annotations:[ { xref:'paper', x:0.012, y:15, yanchor:'bottom', text:'15% hurdle', showarrow:false, font:{ color:'#C9A24B', size:11, family:'IBM Plex Mono' } } ]
+    });
+    window.Plotly.react(el, traces, layout, { responsive:true, displayModeBar:false });
+  }
+
+  drawScore(){
+    const el=document.getElementById('chart-score'); if(!el) return;
+    const base=this.allDeals.filter(d=>{
+      if(this.state.lobs.indexOf(d.lob)<0) return false;
+      if(d.rating>this.state.ratingMax) return false;
+      if(this.state.hurdle==='above'&&d.robc<15) return false;
+      if(this.state.hurdle==='below'&&d.robc>=15) return false;
+      return true;
+    });
+    const map={};
+    base.forEach(d=>{ (map[d.industry]=map[d.industry]||{ni:0,bc:0,n:0}); map[d.industry].ni+=d.ni; map[d.industry].bc+=d.bc; map[d.industry].n++; });
+    let rows=Object.keys(map).map(k=>({ industry:k, robc:map[k].bc>0?map[k].ni/map[k].bc*100:0, n:map[k].n, bc:map[k].bc }));
+    rows.sort((a,b)=>a.robc-b.robc);
+    const colors=rows.map(r=>{
+      if(this.state.industry && r.industry!==this.state.industry) return 'rgba(255,255,255,0.14)';
+      return r.robc>=15 ? '#46B98A' : '#E0825B';
+    });
+    const trace={ type:'bar', orientation:'h', x:rows.map(r=>r.robc), y:rows.map(r=>r.industry),
+      marker:{ color:colors }, width:0.72,
+      customdata:rows.map(r=>[r.n,this.fmtUSD(r.bc)]),
+      text:rows.map(r=>r.robc.toFixed(1)+'%'), textposition:'outside', textfont:{ family:'IBM Plex Mono', size:11, color:'#C7D6E5' }, cliponaxis:false,
+      hovertemplate:'<b>%{y}</b><br>Capital-weighted RoBC: <b>%{x:.1f}%</b><br>%{customdata[0]} deals · %{customdata[1]} capital<extra></extra>'
+    };
+    const xmax=Math.max(28, Math.max.apply(null, rows.map(r=>r.robc))+4);
+    const layout=this.baseLayout({
+      margin:{ l:190, r:30, t:8, b:40 },
+      bargap:0.28,
+      xaxis:{ title:{ text:'Capital-weighted Return on Blended Capital (%)', font:{size:12} }, gridcolor:'rgba(255,255,255,0.06)', zeroline:false, ticksuffix:'%', range:[0,xmax] },
+      yaxis:{ automargin:true, tickfont:{ size:12, color:'#C7D6E5' } },
+      shapes:[ { type:'line', x0:15, x1:15, yref:'paper', y0:0, y1:1, line:{ color:'#C9A24B', width:1.4, dash:'dash' } } ],
+      annotations:[ { x:15, xanchor:'left', yref:'paper', y:1, yanchor:'top', text:' 15% hurdle', showarrow:false, font:{ color:'#C9A24B', size:11, family:'IBM Plex Mono' } } ]
+    });
+    window.Plotly.react(el, [trace], layout, { responsive:true, displayModeBar:false });
+    if(!this._scoreBound){
+      el.on('plotly_click', (ev)=>{ if(!ev.points||!ev.points.length) return; const ind=ev.points[0].y; this.setState(st=>({ industry: st.industry===ind?null:ind })); });
+      this._scoreBound=true;
+    }
+  }
+
+  drawCmpDist(){
+    const el=document.getElementById('chart-cmp-dist'); if(!el) return;
+    const peers=this.computePeers();
+    const xs=peers.map(d=>d.robc);
+    const cr=this.state.cRoBC;
+    const trace={ type:'histogram', x:xs, nbinsx:26,
+      marker:{ color:'rgba(79,154,215,0.4)', line:{ color:'rgba(79,154,215,0.7)', width:1 } },
+      hovertemplate:'RoBC ~%{x}%<br>%{y} deals<extra></extra>' };
+    const layout=this.baseLayout({
+      margin:{ l:44, r:14, t:8, b:36 }, bargap:0.05,
+      xaxis:{ title:{ text:'Peer RoBC (%)', font:{size:11} }, gridcolor:'rgba(255,255,255,0.06)', zeroline:false, ticksuffix:'%' },
+      yaxis:{ title:{ text:'Deals', font:{size:11} }, gridcolor:'rgba(255,255,255,0.06)', zeroline:false },
+      shapes:[
+        { type:'line', x0:15, x1:15, yref:'paper', y0:0, y1:1, line:{ color:'#C9A24B', width:1.2, dash:'dash' } },
+        { type:'line', x0:cr, x1:cr, yref:'paper', y0:0, y1:1, line:{ color:'#EAF1F8', width:2.4 } }
+      ],
+      annotations:[
+        { x:cr, xanchor:'left', yref:'paper', y:1, yanchor:'top', text:' Your deal', showarrow:false, font:{ color:'#EAF1F8', size:11, family:'IBM Plex Mono' } },
+        { x:15, xanchor:'right', yref:'paper', y:1, yanchor:'top', text:'hurdle ', showarrow:false, font:{ color:'#C9A24B', size:10, family:'IBM Plex Mono' } }
+      ]
+    });
+    window.Plotly.react(el, [trace], layout, { responsive:true, displayModeBar:false });
+  }
+  drawCmpMix(){
+    const el=document.getElementById('chart-cmp-mix'); if(!el) return;
+    const yourMix=this.normMix(this.state.cMix);
+    const peers=this.computePeers();
+    const win=peers.filter(d=>d.robc>=15);
+    const peerMix=this.medianMix(win.length>=4?win:peers);
+    const cats=['Above-hurdle peers','Your deal'];
+    const traces=this.PRODUCTS.map(p=>({
+      type:'bar', orientation:'h', name:p.name, y:cats, x:[peerMix[p.key], yourMix[p.key]],
+      marker:{ color:p.color },
+      text:[Math.round(peerMix[p.key])+'%', Math.round(yourMix[p.key])+'%'], textposition:'inside', insidetextanchor:'middle',
+      textfont:{ size:10, color:'#06101C', family:'IBM Plex Mono' },
+      hovertemplate:'%{y}<br>'+p.name+': %{x:.0f}%<extra></extra>'
+    }));
+    const layout=this.baseLayout({
+      barmode:'stack', margin:{ l:140, r:14, t:6, b:24 },
+      xaxis:{ range:[0,100], ticksuffix:'%', gridcolor:'rgba(255,255,255,0.06)', zeroline:false },
+      yaxis:{ tickfont:{ size:11, color:'#C7D6E5' } },
+      showlegend:false
+    });
+    window.Plotly.react(el, traces, layout, { responsive:true, displayModeBar:false });
+  }
+
+  drawDist(data){
+    const el=document.getElementById('chart-dist'); if(!el) return;
+    const traces=this.LOBS.filter(l=>this.state.lobs.indexOf(l)>=0).map(lob=>{
+      const dd=data.filter(d=>d.lob===lob).map(d=>d.robc);
+      const short=this.shortLob(lob);
+      return { type:'violin', y:dd, name:short, x:dd.map(()=>short),
+        line:{ color:this.LOBCOLOR[lob], width:1.4 }, fillcolor:this.LOBCOLOR[lob].replace(')',''), opacity:0.55,
+        meanline:{ visible:true, color:'#EAF1F8' }, points:false, spanmode:'hard', width:0.9,
+        hovertemplate:'<b>%{x}</b><br>RoBC: %{y:.1f}%<extra></extra>' };
+    });
+    const layout=this.baseLayout({
+      margin:{ l:48, r:12, t:10, b:34 },
+      xaxis:{ gridcolor:'rgba(0,0,0,0)', tickfont:{ size:11, color:'#C7D6E5' } },
+      yaxis:{ title:{ text:'RoBC %', font:{size:11} }, gridcolor:'rgba(255,255,255,0.06)', zeroline:false, ticksuffix:'%' },
+      shapes:[ { type:'line', xref:'paper', x0:0, x1:1, y0:15, y1:15, line:{ color:'#C9A24B', width:1.2, dash:'dash' } } ]
+    });
+    window.Plotly.react(el, traces, layout, { responsive:true, displayModeBar:false });
+  }
+
+  /* ---------- render ---------- */
+  renderVals(){
+    const data=this.getFiltered();
+    const totNI=data.reduce((a,d)=>a+d.ni,0);
+    const totBC=data.reduce((a,d)=>a+d.bc,0);
+    const above=data.filter(d=>d.robc>=15);
+    const pct=data.length? (above.length/data.length*100) : 0;
+
+    const topInds=(()=>{
+      const c={}; above.forEach(d=>c[d.industry]=(c[d.industry]||0)+1);
+      const arr=Object.keys(c).map(k=>[k,c[k]]).sort((a,b)=>b[1]-a[1]).slice(0,3);
+      return arr.length? arr.map(x=>x[0]).join(' · ') : '—';
+    })();
+
+    const chip=(active,color)=>'display:inline-flex; align-items:center; gap:7px; padding:7px 13px; border-radius:8px; cursor:pointer; font-family:IBM Plex Sans,sans-serif; font-size:12.5px; font-weight:500; border:1px solid '+(active?color:'rgba(255,255,255,0.14)')+'; background:'+(active?(color+'22'):'transparent')+'; color:'+(active?'#EAF1F8':'#8FA6BC')+';';
+    const lobOptions=this.LOBS.map(l=>{
+      const active=this.state.lobs.indexOf(l)>=0;
+      const label=this.shortLob(l);
+      return { name:label, style:chip(active,this.LOBCOLOR[l]),
+        toggle:()=>this.setState(st=>{ const has=st.lobs.indexOf(l)>=0; let lobs=has?st.lobs.filter(x=>x!==l):st.lobs.concat([l]); if(!lobs.length) lobs=[l]; return { lobs }; }) };
+    });
+
+    const seg=(active)=>'padding:7px 14px; border:none; cursor:pointer; font-family:IBM Plex Sans,sans-serif; font-size:12.5px; font-weight:500; background:'+(active?'#C9A24B':'transparent')+'; color:'+(active?'#06101C':'#9DB2C7')+';';
+    const hurdleOptions=[['all','All deals'],['above','Above hurdle'],['below','Below hurdle']].map(([k,label])=>({
+      label, style:seg(this.state.hurdle===k), select:()=>this.setState({ hurdle:k })
+    }));
+
+    /* ---- comparator ---- */
+    const cs=this.state;
+    const shortLob=this.shortLob(cs.cLob);
+    const peers=this.computePeers();
+    const below=peers.filter(d=>d.robc<=cs.cRoBC).length;
+    const pctile=peers.length?Math.round(below/peers.length*100):0;
+    const peerMed=peers.length?this.median(peers.map(d=>d.robc)):0;
+    const delta=cs.cRoBC-15;
+    let verdict, vColor;
+    if(cs.cRoBC<15){ verdict='Below hurdle'; vColor='#E0825B'; }
+    else if(pctile>=70){ verdict='Strong deal'; vColor='#46B98A'; }
+    else { verdict='Meets standard'; vColor='#C9A24B'; }
+    const ord=(pctile%10===1&&pctile!==11)?'st':(pctile%10===2&&pctile!==12)?'nd':(pctile%10===3&&pctile!==13)?'rd':'th';
+    const normd=this.normMix(cs.cMix);
+    const mixControls=this.PRODUCTS.map(p=>({
+      name:p.name, color:p.color, val:cs.cMix[p.key], pct:Math.round(normd[p.key])+'%',
+      oninput:(e)=>this.setState(st=>({ cMix:Object.assign({}, st.cMix, { [p.key]:+e.target.value }) }))
+    }));
+
+    const live=this.usingRealData;
+    return {
+      dataBadge: live ? ('Live data · '+this.allDeals.length+' deals') : 'Sample data',
+      dataBadgeColor: live ? '#7FCBA8' : '#E0A35B',
+      dataBadgeDot: live ? '#46B98A' : '#E0A35B',
+      dataBadgeBorder: live ? 'rgba(70,185,138,0.45)' : 'rgba(224,163,91,0.45)',
+      dataBadgeBg: live ? 'rgba(70,185,138,0.1)' : 'rgba(224,163,91,0.1)',
+      cLob:cs.cLob, cInd:cs.cInd,
+      lobChoices:this.LOBS, indChoices:this.indByLob[cs.cLob],
+      cRoBC:cs.cRoBC, cRoBClabel:cs.cRoBC.toFixed(1)+'%',
+      cExposure:cs.cExposure, cExpLabel:'$'+cs.cExposure+'M',
+      cRating:cs.cRating, mixControls,
+      verdict, verdictColor:vColor,
+      verdictBorder:vColor+'66', verdictBg:vColor+'18',
+      percentileText:'Ranks in the '+pctile+ord+' percentile of '+peers.length+' peer deals',
+      peerMedianText:peerMed.toFixed(1)+'%',
+      deltaText:(delta>=0?'+':'−')+Math.abs(delta).toFixed(1)+' pts',
+      peerScope:this.isSameIndustryPeers()?(cs.cInd+' · '+shortLob):('all '+shortLob+' deals'),
+      setCLob:(e)=>{ const v=e.target.value; this.setState({ cLob:v, cInd:this.indByLob[v][0] }); },
+      setCInd:(e)=>this.setState({ cInd:e.target.value }),
+      onCRoBC:(e)=>this.setState({ cRoBC:+e.target.value }),
+      onCExp:(e)=>this.setState({ cExposure:+e.target.value }),
+      onCRating:(e)=>this.setState({ cRating:+e.target.value }),
+      kDeals:String(data.length),
+      kNI:this.fmtUSD(totNI),
+      kBC:this.fmtUSD(totBC),
+      kRoBC:(totBC>0?(totNI/totBC*100):0).toFixed(1)+'%',
+      kPct:pct.toFixed(0)+'%',
+      pCount:String(above.length),
+      pRoBC:(above.length?this.median(above.map(d=>d.robc)):0).toFixed(1)+'%',
+      pExp:this.fmtUSD(above.length?this.median(above.map(d=>d.exposure)):0),
+      pTenor:(above.length?this.median(above.map(d=>d.tenor)):0).toFixed(1)+' yrs',
+      pRating:(above.length?this.median(above.map(d=>d.rating)):0).toFixed(0),
+      pInds:topInds,
+      lobOptions, hurdleOptions,
+      ratingMax:this.state.ratingMax,
+      onRating:(e)=>this.setState({ ratingMax:+e.target.value }),
+      hasIndustry:!!this.state.industry,
+      activeIndustry:this.state.industry||'',
+      clearIndustry:()=>this.setState({ industry:null }),
+      reset:()=>this.setState({ lobs:this.LOBS.slice(), hurdle:'all', ratingMax:10, industry:null })
+    };
+  }
+}
+</script>
+</body>
+</html>
