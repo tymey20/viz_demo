@@ -1,0 +1,101 @@
+You're helping a commercial credit-risk analytics team at a bank build `reportkit`: a Python engine that generates recurring PowerPoint/HTML reports from BigQuery tables, defined entirely by YAML config. It replaces screenshotting Tableau into decks. This is a regulated environment (SR 11-7), so every number must trace to source, and the engine makes ZERO LLM/AI calls at runtime: it is deterministic code only.
+
+## How we'll work
+- First, tell me plainly whether you can execute code in this environment. If you can, run the tests yourself after each stage and show me the output. If you can't, follow the steps below instead.
+- Deliver ONE stage per response. Start with a file manifest for the stage, then give every file in full, each in its own code block headed with its path. Never elide code with "..." or "rest unchanged"; if a file changes, give the whole file.
+- If a stage is too long for one response, stop at a file boundary and say "continue with <next file>". I'll reply "continue".
+- If you can't run code, then after each stage:
+  1. Give me the exact commands to install, run pytest, and build the example.
+  2. Dry-run check it yourself: trace one test through the code by hand, confirm every import resolves with no circular imports, and list the function signatures later stages will depend on.
+- I'll paste back test output. When fixing, give the corrected full file(s) only, and explain the root cause in one or two sentences. If the same test fails twice, explain what the test checks and why the code fails it before writing more code.
+- I may start a new chat for each stage and paste this brief plus the relevant existing files. Treat pasted code as the source of truth over anything you remember.
+- Wait for my go-ahead before starting each new stage. If you have to guess at my intent, list the guess.
+
+## Design principles (apply throughout)
+- Four layers: (1) SQL/dbt shapes data upstream into tables prefixed `rpt_`; (2) a YAML spec selects, filters, sorts, and arranges columns from those tables; (3) the engine renders and reconciles; (4) coding agents author specs and extend the engine.
+- The spec must NOT be able to join, pivot, aggregate, or calculate. Filters are limited to equality, IN, and gte/lte/gt/lt on declared parameters. If something needs more, it belongs in a new rpt_ table, and you say so.
+- One repo, many reports: shared package `reportkit/`, one folder per report at `reports/<id>/` containing `spec.yaml` and `commentary/`.
+- Controls are enforced in code and tests, not just described in docs.
+- Do not invent business values. Thresholds, wording, and colors in examples are placeholders marked `# TODO(policy)`.
+- Use only: python-pptx, pydantic v2, pandas, pyyaml, pytest, and (optional) google-cloud-bigquery.
+
+## Example spec (match this shape)
+id: pd_monitoring_quarterly
+title: Commercial PD Model — Quarterly Performance Monitoring
+owner: Credit Risk Analytics
+params:
+  as_of: {type: date, required: true}
+  portfolio: {type: str, default: Commercial}
+datasets:
+  seg:
+    mart: rpt_pd_monitoring
+    key: segment
+    filters: {as_of_date: "{as_of}", portfolio: "{portfolio}"}
+  trend:
+    mart: rpt_pd_monitoring
+    filters: {portfolio: "{portfolio}", as_of_date: {lte: "{as_of}"}}
+    order_by: as_of_date          # "-col" = descending
+formats: {gini: dec3, psi: dec3, predicted_dr: pct2, observed_dr: pct2, n_obligors: int}
+thresholds:                       # TODO(policy)
+  gini: {label: Gini, direction: higher_better, green: 0.50, amber: 0.40}
+  psi:
+    label: PSI
+    direction: lower_better
+    green: 0.10
+    amber: 0.25
+    by: {segment: {CRE Investor: {green: 0.15}}}
+slides:
+  - title: Discrimination by Segment
+    exhibits:
+      - {type: table, title: Discrimination, data: seg, key: segment, columns: [n_obligors, gini], rag: [gini]}
+  - title: Population Stability
+    layout: two_up
+    exhibits:
+      - {type: bar, title: PSI by segment, data: seg, category: segment, values: [psi], rag: [psi]}
+      - {type: line, title: PSI trend, data: trend, x: as_of_date, y: psi, series: segment}
+  - title: Commentary
+    layout: commentary
+    exhibits: [{type: commentary, title: Commentary}]
+commentary:
+  red: "{label} for {key} is Red at {value}, breaching the Amber threshold of {amber}."
+  amber: "{label} for {key} is Amber at {value} against a Green threshold of {green}."
+  all_green: "All monitored metrics are within Green thresholds."
+outputs: [pptx, html]
+
+## Stage 1 — Spec, data, controls
+- Pydantic models for the spec. Validate that table names start with `rpt_` and all table/column names are plain identifiers. Reject unknown filter operators, undeclared params, unknown format names, and exhibits referencing undefined datasets. Check that the exhibit count matches the slide layout.
+- Named formats in one module (str, int, dec2, dec3, pct1, pct2, bps, usd_mm, usd_k), each with a Python text format and an Excel number format. bps scales by 10,000, and chart data must be scaled the same way the labels are.
+- RAG logic plus the Threshold model in their own module that does not import the spec module (avoids a circular import). Support per-row overrides via `by`.
+- Two data backends chosen by env var REPORTKIT_BACKEND: `fixtures` (default; reads fixtures/<mart>.csv with synthetic data) and `bigquery` (read-only, fully parameterized queries, never string-built SQL). Params are substituted only as a whole filter value like "{as_of}", never by partial string templating.
+- Provenance: params, source table per dataset, row counts, data hash, spec hash, git SHA, UTC run time.
+- Include synthetic fixture data covering four quarters and five segments.
+Tests: validators reject bad table names, injection-looking columns, and disallowed operators; RAG boundaries are exact at the green/amber edges; segment overrides work.
+
+## Stage 2 — Exhibits, PowerPoint, reconciliation
+- Exhibit registry: each type is one module with a pydantic class implementing render_pptx, render_html, and reconcile. Ship table, bar, column, line (time series, one line per series value), and commentary.
+- Native PowerPoint objects only; never images of charts. Style (colors, fonts, sizes, layout boxes, master layout names) comes from one style module. Use a branded master from templates/ if present. Otherwise use the default master resized to 16:9 and reposition title placeholders (the default master assumes 4:3). RAG cells: dark text on amber, white on red and green.
+- Provenance goes in every slide's notes and in a footer on every content slide.
+- Reconciliation on every build: every table cell's text and every chart series value is compared to source; the build exits non-zero on any mismatch or on extra/missing exhibits.
+Tests: the example report builds; tampering with one table cell is caught; replacing one chart's data is caught.
+
+## Stage 3 — Facts, commentary, CLI
+- Facts: for each dataset with a `key` and each threshold metric, emit metric, label, key, formatted value, status, and the applicable green/amber thresholds (formatted).
+- Default commentary: deterministic sentences from the spec templates, Red before Amber, then ordered by metric and key.
+- Optional draft at reports/<id>/commentary/<as_of>.md with YAML frontmatter. Every numeric token in the draft must appear in the formatted facts, or the build fails. Exempt years, dates, and quarter labels. The slide shows "DRAFT — requires analyst sign-off" until a human sets `signed_off_by`; nothing in the code ever sets it.
+- CLI: `reportkit build|facts|check reports/<id> -p key=value [--out dir]`.
+Tests: a grounded draft passes; a draft containing an invented number fails.
+
+## Stage 4 — Prove it generalizes
+- Add a second report: monthly RAROC committee pack. Two rpt_ tables (by segment; top clients), usd_mm/pct1/bps formats, a top-8 list sorted by exposure descending, a RAROC-vs-hurdle column chart with RAG, and a two_up layout. Include synthetic fixtures.
+- Minimal HTML renderer driven by the same spec.
+- Give me commands to render both decks to images with LibreOffice (soffice) so I can check layout, and list the specific defects I should look for (overflow, overlap, unreadable labels, footer collisions). Fix any issues I report in the engine, not the outputs.
+- List anything the spec could not express cleanly.
+
+## Stage 5 — Docs for humans and agents
+- STYLE.md: visual rules, number conventions, and commentary rules (sentence pattern; no causes unless they're in the facts, so use "Question for review:" instead; never soften a breach; no boilerplate that would read the same regardless of the numbers).
+- AGENTS.md: only the always-true rules, under 40 lines. .agents/skills/ gets one procedure each for new-report, add-exhibit, draft-commentary, and validate-report, each with a "use when…" description. Don't repeat AGENTS.md inside skills.
+- dbt_examples/ showing what rpt_ models look like (illustration only; the engine must not depend on dbt).
+- README with a quick start.
+- DESIGN.md for Model Risk Management (1–2 pages): the controls, where each is enforced in code, what the tests prove, and what is explicitly out of scope.
+
+Start by answering whether you can execute code, then confirm the plan and propose the module layout for Stage 1. Don't write code until I say go.
