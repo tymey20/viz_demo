@@ -1,0 +1,10 @@
+as_of_date,lob,client,segment,exposure_mm,revenue_mm,nim_bps,raroc
+2026-08-31,Commercial Banking,Client A,C&I Large Corporate,412.0,5.1,0.0182,0.121
+2026-08-31,Commercial Banking,Client B,C&I Large Corporate,388.5,4.2,0.0155,0.094
+2026-08-31,Commercial Banking,Client C,CRE Investor,355.0,3.9,0.0171,0.088
+2026-08-31,Commercial Banking,Client D,C&I Middle Market,301.2,6.3,0.0244,0.171
+2026-08-31,Commercial Banking,Client E,CRE Investor,290.8,3.1,0.0149,0.103
+2026-08-31,Commercial Banking,Client F,C&I Large Corporate,276.4,4.8,0.0201,0.139
+2026-08-31,Commercial Banking,Client G,Business Banking,244.9,5.6,0.0288,0.184
+2026-08-31,Commercial Banking,Client H,C&I Middle Market,231.0,3.4,0.0176,0.115
+2026-08-31,Commercial Banking,Client I,CRE Owner-Occupied,198.3,2.9,0.0168,0.109

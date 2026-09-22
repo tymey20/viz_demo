@@ -1,0 +1,56 @@
+# Quarterly PD model monitoring. Single mart + history mart, filtered by as_of and portfolio.
+id: pd_monitoring_quarterly
+title: Commercial PD Model — Quarterly Performance Monitoring
+owner: Credit Risk Analytics
+
+params:
+  as_of:     {type: date, required: true}
+  portfolio: {type: str, default: Commercial}
+
+datasets:
+  seg:
+    mart: rpt_pd_monitoring
+    key: segment
+    filters: {as_of_date: "{as_of}", portfolio: "{portfolio}"}
+  trend:
+    mart: rpt_pd_monitoring
+    filters: {portfolio: "{portfolio}", as_of_date: {lte: "{as_of}"}}
+    order_by: as_of_date
+
+formats: {gini: dec3, ks: dec3, psi: dec3, predicted_dr: pct2, observed_dr: pct2, n_obligors: int}
+
+thresholds:
+  gini: {label: Gini, direction: higher_better, green: 0.50, amber: 0.40}
+  psi:
+    label: PSI
+    direction: lower_better
+    green: 0.10
+    amber: 0.25
+    by:                                 # segment-specific overrides, per MRM standard §4.2
+      segment:
+        CRE Investor: {green: 0.15, amber: 0.25}
+
+slides:
+  - title: Discrimination by Segment
+    exhibits:
+      - {type: table, title: Discrimination, data: seg, key: segment, columns: [n_obligors, gini, ks], rag: [gini]}
+  - title: Population Stability
+    layout: two_up
+    exhibits:
+      - {type: bar,  title: PSI by segment, data: seg, category: segment, values: [psi], rag: [psi]}
+      - {type: line, title: PSI trend, data: trend, x: as_of_date, y: psi, series: segment}
+  - title: Calibration — Predicted vs. Observed Default Rate
+    exhibits:
+      - {type: column, title: Calibration, data: seg, category: segment, values: [predicted_dr, observed_dr]}
+  - title: Commentary
+    layout: commentary
+    exhibits:
+      - {type: commentary, title: Commentary}
+
+commentary:
+  red:   "{label} for {key} is Red at {value}, breaching the Amber threshold of {amber}."
+  amber: "{label} for {key} is Amber at {value} against a Green threshold of {green}."
+  all_green: "All monitored metrics are within Green thresholds this quarter."
+
+outputs: [pptx, html]
+template: null

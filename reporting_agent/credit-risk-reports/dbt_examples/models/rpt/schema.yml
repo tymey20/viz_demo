@@ -1,0 +1,13 @@
+version: 2
+models:
+  - name: rpt_pd_monitoring
+    description: Quarterly PD monitoring metrics by segment. Read by reports/pd_monitoring_quarterly.
+    tests:
+      - dbt_utils.unique_combination_of_columns: {combination_of_columns: [as_of_date, portfolio, segment]}
+    columns:
+      - {name: as_of_date, tests: [not_null]}
+      - {name: psi, tests: [not_null]}
+  - name: rpt_raroc_by_segment
+    description: Monthly RAROC by segment. Read by reports/raroc_committee.
+    tests:
+      - dbt_utils.unique_combination_of_columns: {combination_of_columns: [as_of_date, lob, segment]}

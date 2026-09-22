@@ -1,0 +1,48 @@
+# Monthly RAROC committee pack. Two marts, $ and % formats, top-N list, hurdle-based RAG.
+id: raroc_committee
+title: Commercial Banking — Client Profitability (RAROC) Committee Pack
+owner: Client Profitability Analytics
+
+params:
+  as_of: {type: date, required: true}
+  lob:   {type: str, default: Commercial Banking}
+
+datasets:
+  by_segment:
+    mart: rpt_raroc_by_segment
+    key: segment
+    filters: {as_of_date: "{as_of}", lob: "{lob}"}
+    order_by: segment
+  top_clients:
+    mart: rpt_raroc_top_clients
+    key: client
+    filters: {as_of_date: "{as_of}", lob: "{lob}"}
+    order_by: -exposure_mm
+    limit: 8
+
+formats: {exposure_mm: usd_mm, revenue_mm: usd_mm, raroc: pct1, hurdle: pct1, nim_bps: bps}
+
+thresholds:
+  raroc: {label: RAROC, direction: higher_better, green: 0.12, amber: 0.10}
+
+slides:
+  - title: RAROC by Segment
+    layout: two_up
+    exhibits:
+      - {type: table,  title: Segment summary, data: by_segment, key: segment, columns: [exposure_mm, revenue_mm, raroc], rag: [raroc]}
+      - {type: column, title: RAROC vs hurdle, data: by_segment, category: segment, values: [raroc, hurdle], rag: [raroc]}
+  - title: Largest Exposures
+    exhibits:
+      - {type: table, title: Top clients, data: top_clients, key: client, columns: [exposure_mm, revenue_mm, nim_bps, raroc], rag: [raroc]}
+  - title: Commentary
+    layout: commentary
+    exhibits:
+      - {type: commentary, title: Commentary}
+
+commentary:
+  header: "Profitability observations (system-generated):"
+  red:   "{label} for {key} is {value}, below the {amber} minimum."
+  amber: "{label} for {key} is {value}, below the {green} target."
+  all_green: "All segments and top clients meet the RAROC target."
+
+outputs: [pptx, html]

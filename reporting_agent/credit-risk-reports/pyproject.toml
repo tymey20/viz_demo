@@ -1,0 +1,22 @@
+[project]
+name = "reportkit"
+version = "0.2.0"
+requires-python = ">=3.10"
+dependencies = ["python-pptx>=1.0", "pyyaml", "pandas", "pydantic>=2"]
+
+[project.optional-dependencies]
+bigquery = ["google-cloud-bigquery", "db-dtypes"]
+dev = ["pytest"]
+
+[project.scripts]
+reportkit = "reportkit.cli:main"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["reportkit", "reportkit.exhibits"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
